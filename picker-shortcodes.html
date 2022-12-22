@@ -1,0 +1,1556 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="initial-scale=1.0">
+<title>Picker</title>
+<style>
+body {
+    background:#FFF;
+    color:#000;
+    font-family:verdana, sans-serif;
+    font-size:10pt;
+    margin:0;
+    padding:10px;
+}
+
+a:link, a:visited {
+    color:#008;
+    font-weight:bold;
+    text-decoration:none;
+}
+
+a:active, a:hover {
+    color:#ACF;
+}
+
+.info {
+    font-weight:bold;
+}
+
+button {
+    font-family:inherit;
+    cursor:pointer;
+    border:0;
+    border-radius:3px;
+    padding:0.3em 0.5em;
+    background:#CCC;
+    color:#000;
+}
+
+button:hover {
+    background:#DDD;
+}
+
+button.disabled {
+    background:#DDD;
+    color:#888;
+    cursor:not-allowed;
+}
+
+button.disabled:hover {
+    background:#DDD;
+}
+
+#container {
+    position:relative;
+    margin-left:-10px;
+    margin-right:-10px;
+    padding:10px;
+    overflow:hidden;
+}
+
+@media (min-width:1024px) {
+    /* Put the found favorites beside the picking div when the window is sufficiently large */
+    #picking {
+        float:left;
+        width:636px;
+    }
+
+    #secondary {
+        margin-left:646px;
+    }
+}
+
+@media (min-width:1300px) {
+    /* Once we get to the point where 636px is less than half of the width of the screen, make the picking div just take up half */
+    #picking {
+        width:50%;
+    }
+
+    #secondary {
+        margin-left:51%;
+    }
+}
+
+#pick {
+    background:#58F;
+    color:#FFF;
+    font-size:larger;
+    font-weight:bold;
+    width:6em;
+    border-radius:5px;
+    margin-right:10px;
+}
+
+#pick.disabled {
+    background:#ACF;
+}
+
+#pick:hover {
+    background:#ACF;
+}
+
+.item-list {
+    padding:0;
+    list-style-type:none;
+    line-height:100px;
+}
+
+.item-list li {
+    margin:0;
+    display:inline-block;
+    height:100px;
+    width:100px;
+    line-height:100px;
+    border:3px solid transparent;
+    text-align:center;
+    position:relative;
+    vertical-align:top;
+    overflow:hidden;
+    border-radius:53px;
+    background:#F7F7F7;
+    color:#000;
+}
+
+.item-list li img {
+    vertical-align:middle;
+    max-height:100%;
+    max-width:100%;
+}
+
+.item-list li span {
+    display:inline-block;
+    vertical-align:middle;
+    line-height:1.2;
+}
+
+@media (max-width:636px) {
+    .item-list {
+        line-height:75px;
+    }
+
+    .item-list li {
+        line-height:75px;
+        height:75px;
+        width:75px;
+    }
+}
+
+@media (max-width:423px) {
+    .item-list {
+        line-height:50px;
+    }
+
+    .item-list li {
+        line-height:50px;
+        height:50px;
+        width:50px;
+    }
+}
+
+#evaluating li {
+    cursor:pointer;
+}
+
+#favorites li {
+    cursor:move;
+}
+
+.item-list li:hover {
+    background:#CDF;
+}
+
+.item-list.sorting li:hover {
+    background:#F7F7F7;
+}
+
+#evaluating li.selected {
+    border:3px solid #7AC;
+}
+
+#evaluating, #buttons {
+    text-align:center;
+    margin:auto;
+}
+
+#evaluating li.notice {
+    width:auto;
+    height:auto;
+    max-width:260px;
+    margin:auto;
+    background:#F7F7F7;
+    border-radius:10px;
+    padding:30px 30px;
+    color:#000;
+    text-align:center;
+    line-height:1.4;
+    cursor:auto;
+    font-size:10pt;
+}
+
+#buttons {
+    margin-top:30px;
+    position:relative;
+    z-index:3;
+}
+
+#shared-list-modal {
+    position:absolute;
+    background:#FFF;
+    margin:60px auto;
+    top:0;
+    right:0;
+    left:0;
+    width:650px;
+    max-width:95%;
+    box-sizing:border-box;
+    padding:20px 50px 50px;
+    box-shadow:1px 1px 5px #333;
+    z-index:100;
+}
+
+@media(max-width:700px) {
+    #shared-list-modal {
+        padding:20px;
+    }
+}
+
+#shared-list-modal:before {
+    content:'';
+    position:fixed;
+    background:#FFF;
+    opacity:0.5;
+    top:0;
+    right:0;
+    bottom:0;
+    left:0;
+    z-index:-1;
+}
+
+#shared-list-modal .item-list {
+    text-align:center;
+    margin:2em 0;
+}
+
+#shared-list-modal .close {
+    position:absolute;
+    top:10px;
+    right:10px;
+    width:30px;
+    line-height:30px;
+    color:#AAA;
+    font-weight:bold;
+    text-align:center;
+    background:none;
+    padding:0;
+    font-size:larger;
+}
+
+#shared-list-modal .close:hover {
+    background:#EEE;
+}
+
+#shared-list-modal .buttons {
+    text-align:center;
+    line-height:3.5em;
+}
+
+#shared-list-modal button {
+    padding:0.9em 2em;
+    margin:0 0.2em;
+}
+</style>
+</head>
+<body>
+<h1>Picker</h1>
+
+<p>You can include any content you want here.</p>
+
+<div id="container">
+
+<div id="picking">
+<ul id="evaluating" class="item-list">
+</ul>
+
+<p id="buttons"><button id="pick">Pick</button> <button id="pass">Pass</button> <button id="undo">Undo</button> <button id="redo">Redo</button></p>
+</div>
+
+<div id="secondary">
+<h2>Found favorites</h2>
+
+<ol id="favorites" class="item-list">
+</ol>
+
+<p><a href="" id="shortcode-link">Permalink to this list</a></p>
+</div>
+</div>
+<script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
+<script src="picker.js"></script>
+<script src="picker-ui.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.7.0/Sortable.min.js"></script>
+
+<div id="shared-list-modal" style="display:none">
+<button class="close shared-list-skip">&times;</button>
+<h2>Shared list</h2>
+
+<p>Generated by this picker tool. Create your own list or continue from this one below!</p>
+
+<ol id="shared-list" class="item-list">
+</ol>
+
+<p class="buttons"><button id="shared-list-continue">Continue from this list</button> <button class="shared-list-skip">Make my own list</button></p>
+</div>
+<script>
+'use strict';
+
+var items = [
+    // Define your items here
+{id: 'Bulbasaur', name: 'Bulbasaur', image: 'https://cdn.bulbagarden.net/upload/2/21/001Bulbasaur.png'},
+{id: 'Ivysaur', name: 'Ivysaur', image: 'https://cdn.bulbagarden.net/upload/7/73/002Ivysaur.png'},
+{id: 'Venusaur', name: 'Venusaur', image: 'https://cdn.bulbagarden.net/upload/a/ae/003Venusaur.png'},
+{id: 'Mega Venusaur', name: 'Mega Venusaur', image: 'https://cdn.bulbagarden.net/upload/7/73/003Venusaur-Mega.png'},
+{id: 'gigantamax venusaur', name: 'Gigantamax Venusaur', image: 'https://www.serebii.net/venusaur.jpg'},
+{id: 'charmander', name: 'Charmander', image: 'https://cdn.bulbagarden.net/upload/7/73/004Charmander.png'},
+{id: 'charmeleon', name: 'Charmeleon', image: 'https://cdn.bulbagarden.net/upload/4/4a/005Charmeleon.png'},
+{id: 'charizard', name: 'Charizard', image: 'https://cdn.bulbagarden.net/upload/7/7e/006Charizard.png'},
+{id: 'megacharizardx', name: 'Mega Charizard X', image: 'https://cdn.bulbagarden.net/upload/3/36/006Charizard-Mega_X.png'},
+{id: 'Megacharizardy', name: 'Mega Charizard Y', image: 'https://cdn.bulbagarden.net/upload/f/fd/006Charizard-Mega_Y.png'},
+{id: 'gigantamaxcharizard', name: 'Gigantamax Charizard', image: 'https://cdn.bulbagarden.net/upload/8/88/006Charizard-Gigantamax.png'},
+{id: 'squirtle', name: 'Squirtle', image: 'https://cdn.bulbagarden.net/upload/3/39/007Squirtle.png'},
+{id: 'wartortle', name: 'Wartortle', image: 'https://cdn.bulbagarden.net/upload/0/0c/008Wartortle.png'},
+{id: 'blastoise', name: 'Blastoise', image: 'https://cdn.bulbagarden.net/upload/0/02/009Blastoise.png'},
+{id: 'mega blastoise', name: 'Mega Blastoise', image: 'https://cdn.bulbagarden.net/upload/8/85/009Blastoise-Mega.png'},
+{id: 'gigantamax blastoise', name: 'Gigantamax Blastoise', image: 'https://www.serebii.net/blastoise.jpg'},
+{id: 'caterpie', name: 'Caterpie', image: 'https://cdn.bulbagarden.net/upload/5/5d/010Caterpie.png'},
+{id: 'metapod', name: 'Metapod', image: 'https://cdn.bulbagarden.net/upload/c/cd/011Metapod.png'},
+{id: 'butterfree', name: 'Butterfree', image: 'https://cdn.bulbagarden.net/upload/d/d1/012Butterfree.png'},
+{id: 'gigantamax butterfree', name: 'Gigantamax Butterfree', image: 'https://cdn.bulbagarden.net/upload/f/fd/012Butterfree-Gigantamax.png'},
+{id: 'weedle', name: 'Weedle', image: 'https://cdn.bulbagarden.net/upload/d/df/013Weedle.png'},
+{id: 'kakuna', name: 'Kakuna', image: 'https://cdn.bulbagarden.net/upload/f/f0/014Kakuna.png'},
+{id: 'beedrill', name: 'Beedrill', image: 'https://cdn.bulbagarden.net/upload/6/61/015Beedrill.png'},
+{id: 'megabeedrill', name: 'Mega Beedrill', image: 'https://cdn.bulbagarden.net/upload/7/76/015Beedrill-Mega.png'},
+{id: 'pidgey', name: 'Pidgey', image: 'https://cdn.bulbagarden.net/upload/5/55/016Pidgey.png'},
+{id: 'pidgeotto', name: 'Pidgeotto', image: 'https://cdn.bulbagarden.net/upload/7/7a/017Pidgeotto.png'},
+{id: 'pidgeot', name: 'Pidgeot', image: 'https://cdn.bulbagarden.net/upload/5/57/018Pidgeot.png'},
+{id: 'mega pidgeot', name: 'Mega Pidgeot', image: 'https://cdn.bulbagarden.net/upload/7/71/018Pidgeot-Mega.png'},
+{id: 'rattata', name: 'Rattata', image: 'https://cdn.bulbagarden.net/upload/4/46/019Rattata.png'},
+{id: 'alolan rattata', name: 'Alolan Rattata', image: 'https://cdn.bulbagarden.net/upload/9/91/019Rattata-Alola.png'},
+{id: 'raticate', name: 'Raticate', image: 'https://cdn.bulbagarden.net/upload/f/f4/020Raticate.png'},
+{id: 'alolan raticate', name: 'Alolan Raticate', image: 'https://cdn.bulbagarden.net/upload/7/71/020Raticate-Alola.png'},
+{id: 'spearow', name: 'Spearow', image: 'https://cdn.bulbagarden.net/upload/8/8b/021Spearow.png'},
+{id: 'fearow', name: 'Fearow', image: 'https://cdn.bulbagarden.net/upload/a/a0/022Fearow.png'},
+{id: 'ekans', name: 'Ekans', image: 'https://cdn.bulbagarden.net/upload/f/fa/023Ekans.png'},
+{id: 'arbok', name: 'Arbok', image: 'https://cdn.bulbagarden.net/upload/c/cd/024Arbok.png'},
+{id: 'Pikachu', name: 'Pikachu', image: 'https://cdn.bulbagarden.net/upload/0/0d/025Pikachu.png'},
+{id: 'pikachu rock star', name: 'Pikachu Rock Star', image: 'https://cdn.bulbagarden.net/upload/4/4f/025Pikachu-Rock_Star.png'},
+{id: 'pikachu belle', name: 'Pikachu Belle', image: 'https://cdn.bulbagarden.net/upload/f/f0/025Pikachu-Belle.png'},
+{id: 'pikachu pop star', name: 'Pikachu Pop Star', image: 'https://cdn.bulbagarden.net/upload/e/e8/025Pikachu-Pop_Star.png'},
+{id: 'pikachu phD', name: 'Pikachu phD', image: 'https://cdn.bulbagarden.net/upload/2/2f/025Pikachu-PhD.png'},
+{id: 'pikachu libre', name: 'Pikachu Libre', image: 'https://cdn.bulbagarden.net/upload/e/e7/025Pikachu-Libre.png'},
+{id: 'gigantamax pikachu', name: 'Gigantamax Pikachu', image: 'https://cdn.bulbagarden.net/upload/6/6b/025Pikachu-Gigantamax.png'},
+{id: 'raichu', name: 'Raichu', image: 'https://cdn.bulbagarden.net/upload/8/88/026Raichu.png'},
+{id: 'alolan raichu', name: 'Alolan Raichu', image: 'https://cdn.bulbagarden.net/upload/3/3a/026Raichu-Alola.png'},
+{id: 'sandshrew', name: 'Sandshrew', image: 'https://cdn.bulbagarden.net/upload/9/9e/027Sandshrew.png'},
+{id: 'alolan sandshrew', name: 'Alolan Sandshrew', image: 'https://cdn.bulbagarden.net/upload/c/c9/027Sandshrew-Alola.png'},
+{id: 'sandslash', name: 'Sandslash', image: 'https://cdn.bulbagarden.net/upload/0/0b/028Sandslash.png'},
+{id: 'alolan sandslash', name: 'Alolan Sandslash', image: 'https://cdn.bulbagarden.net/upload/b/bd/028Sandslash-Alola.png'},
+{id: 'nidoranf', name: 'Nidoran Female', image: 'https://cdn.bulbagarden.net/upload/8/81/029Nidoran.png'},
+{id: 'nidorina', name: 'Nidorina', image: 'https://cdn.bulbagarden.net/upload/c/cd/030Nidorina.png'},
+{id: 'nidoqueen', name: 'Nidoqueen', image: 'https://cdn.bulbagarden.net/upload/b/bf/031Nidoqueen.png'},
+{id: 'nidoranm', name: 'Nidoran Male', image: 'https://cdn.bulbagarden.net/upload/4/4a/032Nidoran.png'},
+{id: 'nidorino', name: 'Nidorino', image: 'https://cdn.bulbagarden.net/upload/9/9f/033Nidorino.png'},
+{id: 'nidoking', name: 'Nidoking', image: 'https://cdn.bulbagarden.net/upload/c/c6/034Nidoking.png'},
+{id: 'clefairy', name: 'Clefairy', image: 'https://cdn.bulbagarden.net/upload/f/f4/035Clefairy.png'},
+{id: 'clefable', name: 'Clefable', image: 'https://cdn.bulbagarden.net/upload/a/a9/036Clefable.png'},
+{id: 'vulpix', name: 'Vulpix', image: 'https://cdn.bulbagarden.net/upload/6/60/037Vulpix.png'},
+{id: 'alolan vulpix', name: 'Alolan Vulpix', image: 'https://cdn.bulbagarden.net/upload/3/35/037Vulpix-Alola.png'},
+{id: 'ninetales', name: 'Ninetales', image: 'https://cdn.bulbagarden.net/upload/0/05/038Ninetales.png'},
+{id: 'alolan ninetales', name: 'Alolan Ninetales', image: 'https://cdn.bulbagarden.net/upload/2/26/038Ninetales-Alola.png'},
+{id: 'jigglypuff', name: 'Jigglypuff', image: 'https://cdn.bulbagarden.net/upload/3/3e/039Jigglypuff.png'},
+{id: 'wigglytuff', name: 'Wigglytuff', image: 'https://cdn.bulbagarden.net/upload/9/92/040Wigglytuff.png'},
+{id: 'zubat', name: 'Zubat', image: 'https://cdn.bulbagarden.net/upload/d/da/041Zubat.png'},
+{id: 'golbat', name: 'Golbat', image: 'https://cdn.bulbagarden.net/upload/0/0c/042Golbat.png'},
+{id: 'oddish', name: 'Oddish', image: 'https://cdn.bulbagarden.net/upload/4/43/043Oddish.png'},
+{id: 'gloom', name: 'Gloom', image: 'https://cdn.bulbagarden.net/upload/2/2a/044Gloom.png'},
+{id: 'vileplume', name: 'Vileplume', image: 'https://cdn.bulbagarden.net/upload/6/6a/045Vileplume.png'},
+{id: 'paras', name: 'Paras', image: 'https://cdn.bulbagarden.net/upload/d/d4/046Paras.png'},
+{id: 'parasect', name: 'Parasect', image: 'https://cdn.bulbagarden.net/upload/8/80/047Parasect.png'},
+{id: 'venonat', name: 'Venonat', image: 'https://cdn.bulbagarden.net/upload/a/ad/048Venonat.png'},
+{id: 'venomoth', name: 'Venomoth', image: 'https://cdn.bulbagarden.net/upload/d/d3/049Venomoth.png'},
+{id: 'diglett', name: 'Diglett', image: 'https://cdn.bulbagarden.net/upload/3/31/050Diglett.png'},
+{id: 'alolan diglett', name: 'Alolan Diglett', image: 'https://cdn.bulbagarden.net/upload/1/10/050Diglett-Alola.png'},
+{id: 'dugtrio', name: 'Dugtrio', image: 'https://cdn.bulbagarden.net/upload/e/e5/051Dugtrio.png'},
+{id: 'alolan dugtrio', name: 'Alolan Dugtrio', image: 'https://cdn.bulbagarden.net/upload/2/22/051Dugtrio-Alola.png'},
+{id: 'meowth', name: 'Meowth', image: 'https://cdn.bulbagarden.net/upload/d/d6/052Meowth.png'},
+{id: 'alolan meowth', name: 'Alolan Meowth', image: 'https://cdn.bulbagarden.net/upload/e/e3/052Meowth-Alola.png'},
+{id: 'galarian meowth', name: 'Galarian Meowth', image: 'https://cdn.bulbagarden.net/upload/0/09/052Meowth-Galar.png'},
+{id: 'gigantamax meowth', name: 'Gigantamax Meowth', image: 'https://cdn.bulbagarden.net/upload/9/9f/052Meowth-Gigantamax.png'},
+{id: 'persian', name: 'Persian', image: 'https://cdn.bulbagarden.net/upload/1/13/053Persian.png'},
+{id: 'alolan persian', name: 'Alolan Persian', image: 'https://cdn.bulbagarden.net/upload/8/80/053Persian-Alola.png'},
+{id: 'psyduck', name: 'Psyduck', image: 'https://cdn.bulbagarden.net/upload/5/53/054Psyduck.png'},
+{id: 'golduck', name: 'Golduck', image: 'https://cdn.bulbagarden.net/upload/f/fe/055Golduck.png'},
+{id: 'mankey', name: 'Mankey', image: 'https://cdn.bulbagarden.net/upload/4/41/056Mankey.png'},
+{id: 'primeape', name: 'Primeape', image: 'https://cdn.bulbagarden.net/upload/9/9a/057Primeape.png'},
+{id: 'growlithe', name: 'Growlithe', image: 'https://cdn.bulbagarden.net/upload/3/3d/058Growlithe.png'},
+{id: 'arcanine', name: 'Arcanine', image: 'https://cdn.bulbagarden.net/upload/b/b8/059Arcanine.png'},
+{id: 'poliwag', name: 'Poliwag', image: 'https://cdn.bulbagarden.net/upload/4/49/060Poliwag.png'},
+{id: 'poliwhirl', name: 'Poliwhirl', image: 'https://cdn.bulbagarden.net/upload/a/a9/061Poliwhirl.png'},
+{id: 'poliwrath', name: 'Poliwrath', image: 'https://cdn.bulbagarden.net/upload/2/2d/062Poliwrath.png'},
+{id: 'abra', name: 'Abra', image: 'https://cdn.bulbagarden.net/upload/6/62/063Abra.png'},
+{id: 'kadabra', name: 'Kadabra', image: 'https://cdn.bulbagarden.net/upload/9/97/064Kadabra.png'},
+{id: 'alakazam', name: 'Alakazam', image: 'https://cdn.bulbagarden.net/upload/c/cc/065Alakazam.png'},
+{id: 'mega alakazam', name: 'Mega Alakazam', image: 'https://cdn.bulbagarden.net/upload/3/34/065Alakazam-Mega.png'},
+{id: 'machop', name: 'Machop', image: 'https://cdn.bulbagarden.net/upload/8/85/066Machop.png'},
+{id: 'machoke', name: 'Machoke', image: 'https://cdn.bulbagarden.net/upload/8/8e/067Machoke.png'},
+{id: 'machamp', name: 'Machamp', image: 'https://cdn.bulbagarden.net/upload/8/8f/068Machamp.png'},
+{id: 'gigantamax machamp', name: 'Gigantamax Machamp', image: 'https://cdn.bulbagarden.net/upload/c/c4/068Machamp-Gigantamax.png'},
+{id: 'bellsprout', name: 'Bellsprout', image: 'https://cdn.bulbagarden.net/upload/a/a2/069Bellsprout.png'},
+{id: 'weepinbell', name: 'Weepinbell', image: 'https://cdn.bulbagarden.net/upload/9/9f/070Weepinbell.png'},
+{id: 'victreebel', name: 'Victreebel', image: 'https://cdn.bulbagarden.net/upload/b/be/071Victreebel.png'},
+{id: 'tentacool', name: 'Tentacool', image: 'https://cdn.bulbagarden.net/upload/4/4e/072Tentacool.png'},
+{id: 'tentacruel', name: 'Tentacruel', image: 'https://cdn.bulbagarden.net/upload/f/f6/073Tentacruel.png'},
+{id: 'geodude', name: 'Geodude', image: 'https://cdn.bulbagarden.net/upload/9/98/074Geodude.png'},
+{id: 'alolan geodude', name: 'Alolan Geodude', image: 'https://cdn.bulbagarden.net/upload/4/43/074Geodude-Alola.png'},
+{id: 'graveler', name: 'Graveler', image: 'https://cdn.bulbagarden.net/upload/7/75/075Graveler.png'},
+{id: 'alolan graveler', name: 'Alolan Graveler', image: 'https://cdn.bulbagarden.net/upload/6/62/075Graveler-Alola.png'},
+{id: 'golem', name: 'Golem', image: 'https://cdn.bulbagarden.net/upload/f/f2/076Golem.png'},
+{id: 'alolan golem', name: 'Alolan Golem', image: 'https://cdn.bulbagarden.net/upload/0/07/076Golem-Alola.png'},
+{id: 'ponyta', name: 'Ponyta', image: 'https://cdn.bulbagarden.net/upload/3/3b/077Ponyta.png'},
+{id: 'galarian ponyta', name: 'Galarian Ponyta', image: 'https://cdn.bulbagarden.net/upload/9/92/077Ponyta-Galar.png'},
+{id: 'rapidash', name: 'Rapidash', image: 'https://cdn.bulbagarden.net/upload/3/3f/078Rapidash.png'},
+{id: 'galarian rapidash', name: 'Galarian Rapidash', image: 'https://cdn.bulbagarden.net/upload/e/e0/078Rapidash-Galar.png'},
+{id: 'slowpoke', name: 'Slowpoke', image: 'https://cdn.bulbagarden.net/upload/7/70/079Slowpoke.png'},
+{id: 'galarian slowpoke', name: 'Galarian Slowpoke', image: 'https://cdn.bulbagarden.net/upload/9/9f/079Slowpoke-Galar.png'},
+{id: 'slowbro', name: 'Slowbro', image: 'https://cdn.bulbagarden.net/upload/8/80/080Slowbro.png'},
+{id: 'mega slowbro', name: 'Mega Slowbro', image: 'https://cdn.bulbagarden.net/upload/6/69/080Slowbro-Mega.png'},
+{id: 'galarian slowbro', name: 'Galarian Slowbro', image: 'https://i.redd.it/4x22nntriu941.jpg'},
+{id: 'magnemite', name: 'Magnemite', image: 'https://cdn.bulbagarden.net/upload/6/6c/081Magnemite.png'},
+{id: 'magneton', name: 'Magneton', image: 'https://cdn.bulbagarden.net/upload/7/72/082Magneton.png'},
+{id: 'farfetchd', name: 'Farfetchd', image: 'https://cdn.bulbagarden.net/upload/f/f8/083Farfetch%27d.png'},
+{id: 'galarian farfetchd', name: 'Galarian Farfetchd', image: 'https://cdn.bulbagarden.net/upload/7/7d/083Farfetch%27d-Galar.png'},
+{id: 'doduo', name: 'Doduo', image: 'https://cdn.bulbagarden.net/upload/5/54/084Doduo.png'},
+{id: 'dodrio', name: 'Dodrio', image: 'https://cdn.bulbagarden.net/upload/9/93/085Dodrio.png'},
+{id: 'seel', name: 'Seel', image: 'https://cdn.bulbagarden.net/upload/1/1f/086Seel.png'},
+{id: 'dewgong', name: 'Dewgong', image: 'https://cdn.bulbagarden.net/upload/c/c7/087Dewgong.png'},
+{id: 'grimer', name: 'Grimer', image: 'https://cdn.bulbagarden.net/upload/a/a0/088Grimer.png'},
+{id: 'alolan grimer', name: 'Alolan Grimer', image: 'https://cdn.bulbagarden.net/upload/e/e0/088Grimer-Alola.png'},
+{id: 'muk', name: 'Muk', image: 'https://cdn.bulbagarden.net/upload/7/7c/089Muk.png'},
+{id: 'alolan muk', name: 'Alolan Muk', image: 'https://cdn.bulbagarden.net/upload/1/15/089Muk-Alola.png'},
+{id: 'shellder', name: 'Shellder', image: 'https://cdn.bulbagarden.net/upload/4/40/090Shellder.png'},
+{id: 'cloyster', name: 'Cloyster', image: 'https://cdn.bulbagarden.net/upload/1/1d/091Cloyster.png'},
+{id: 'gastly', name: 'Gastly', image: 'https://cdn.bulbagarden.net/upload/c/ca/092Gastly.png'},
+{id: 'haunter', name: 'Haunter', image: 'https://cdn.bulbagarden.net/upload/6/62/093Haunter.png'},
+{id: 'gengar', name: 'Gengar', image: 'https://cdn.bulbagarden.net/upload/c/c6/094Gengar.png'},
+{id: 'mega gengar', name: 'Mega Gengar', image: 'https://cdn.bulbagarden.net/upload/8/80/094Gengar-Mega.png'},
+{id: 'gigantamax gengar', name: 'Gigantamax Gengar', image: 'https://cdn.bulbagarden.net/upload/3/31/094Gengar-Gigantamax.png'},
+{id: 'onix', name: 'Onix', image: 'https://cdn.bulbagarden.net/upload/9/9a/095Onix.png'},
+{id: 'drowzee', name: 'Drowzee', image: 'https://cdn.bulbagarden.net/upload/3/3e/096Drowzee.png'},
+{id: 'hypno', name: 'Hypno', image: 'https://cdn.bulbagarden.net/upload/0/0a/097Hypno.png'},
+{id: 'krabby', name: 'Krabby', image: 'https://cdn.bulbagarden.net/upload/a/a7/098Krabby.png'},
+{id: 'kingler', name: 'Kingler', image: 'https://cdn.bulbagarden.net/upload/7/71/099Kingler.png'},
+{id: 'gigantamax kingler', name: 'Gigantamax Kingler', image: 'https://cdn.bulbagarden.net/upload/d/d3/099Kingler-Gigantamax.png'},
+{id: 'voltorb', name: 'Voltorb', image: 'https://cdn.bulbagarden.net/upload/d/da/100Voltorb.png'},
+{id: 'electrode', name: 'Electrode', image: 'https://cdn.bulbagarden.net/upload/8/84/101Electrode.png'},
+{id: 'exeggcute', name: 'Exeggcute', image: 'https://cdn.bulbagarden.net/upload/a/af/102Exeggcute.png'},
+{id: 'exeggutor', name: 'Exeggutor', image: 'https://cdn.bulbagarden.net/upload/2/24/103Exeggutor.png'},
+{id: 'alolan exeggutor', name: 'Alolan Exeggutor', image: 'https://cdn.bulbagarden.net/upload/7/74/103Exeggutor-Alola.png'},
+{id: 'cubone', name: 'Cubone', image: 'https://cdn.bulbagarden.net/upload/2/2a/104Cubone.png'},
+{id: 'marowak', name: 'Marowak', image: 'https://cdn.bulbagarden.net/upload/9/98/105Marowak.png'},
+{id: 'alolan marowak', name: 'Alolan Marowak', image: 'https://cdn.bulbagarden.net/upload/0/06/105Marowak-Alola.png'},
+{id: 'hitmonlee', name: 'Hitmonlee', image: 'https://cdn.bulbagarden.net/upload/3/32/106Hitmonlee.png'},
+{id: 'hitmonchan', name: 'Hitmonchan', image: 'https://cdn.bulbagarden.net/upload/a/a3/107Hitmonchan.png'},
+{id: 'lickitung', name: 'Lickitung', image: 'https://cdn.bulbagarden.net/upload/0/00/108Lickitung.png'},
+{id: 'koffing', name: 'Koffing', image: 'https://cdn.bulbagarden.net/upload/1/17/109Koffing.png'},
+{id: 'weezing', name: 'Weezing', image: 'https://cdn.bulbagarden.net/upload/4/42/110Weezing.png'},
+{id: 'galarian weezing', name: 'Galarian Weezing', image: 'https://cdn.bulbagarden.net/upload/3/38/110Weezing-Galar.png'},
+{id: 'rhyhorn', name: 'Rhyhorn', image: 'https://cdn.bulbagarden.net/upload/9/9b/111Rhyhorn.png'},
+{id: 'rhydon', name: 'Rhydon', image: 'https://cdn.bulbagarden.net/upload/4/47/112Rhydon.png'},
+{id: 'chansey', name: 'Chansey', image: 'https://cdn.bulbagarden.net/upload/c/cd/113Chansey.png'},
+{id: 'tangela', name: 'Tangela', image: 'https://cdn.bulbagarden.net/upload/3/3e/114Tangela.png'},
+{id: 'kangaskhan', name: 'Kangaskhan', image: 'https://cdn.bulbagarden.net/upload/4/4e/115Kangaskhan.png'},
+{id: 'mega kangaskhan', name: 'Mega Kangaskhan', image: 'https://cdn.bulbagarden.net/upload/e/e3/115Kangaskhan-Mega.png'},
+{id: 'horsea', name: 'Horsea', image: 'https://cdn.bulbagarden.net/upload/5/5a/116Horsea.png'},
+{id: 'seadra', name: 'Seadra', image: 'https://cdn.bulbagarden.net/upload/2/26/117Seadra.png'},
+{id: 'goldeen', name: 'Goldeen', image: 'https://cdn.bulbagarden.net/upload/7/7b/118Goldeen.png'},
+{id: 'seaking', name: 'Seaking', image: 'https://cdn.bulbagarden.net/upload/6/6a/119Seaking.png'},
+{id: 'staryu', name: 'Staryu', image: 'https://cdn.bulbagarden.net/upload/4/4f/120Staryu.png'},
+{id: 'starmie', name: 'Starmie', image: 'https://cdn.bulbagarden.net/upload/c/cd/121Starmie.png'},
+{id: 'mrmime', name: 'Mr Mime', image: 'https://cdn.bulbagarden.net/upload/e/ec/122Mr._Mime.png'},
+{id: 'galarian mr mime', name: 'Galarian Mr Mime', image: 'https://cdn.bulbagarden.net/upload/d/d1/122Mr._Mime-Galar.png'},
+{id: 'scyther', name: 'Scyther', image: 'https://cdn.bulbagarden.net/upload/b/ba/123Scyther.png'},
+{id: 'jynx', name: 'Jynx', image: 'https://cdn.bulbagarden.net/upload/7/7c/124Jynx.png'},
+{id: 'electabuzz', name: 'Electabuzz', image: 'https://cdn.bulbagarden.net/upload/d/de/125Electabuzz.png'},
+{id: 'magmar', name: 'Magmar', image: 'https://cdn.bulbagarden.net/upload/8/8c/126Magmar.png'},
+{id: 'pinsir', name: 'Pinsir', image: 'https://cdn.bulbagarden.net/upload/7/71/127Pinsir.png'},
+{id: 'mega pinsir', name: 'Mega Pinsir', image: 'https://cdn.bulbagarden.net/upload/7/74/127Pinsir-Mega.png'},
+{id: 'tauros', name: 'Tauros', image: 'https://cdn.bulbagarden.net/upload/b/b8/128Tauros.png'},
+{id: 'magikarp', name: 'Magikarp', image: 'https://cdn.bulbagarden.net/upload/0/02/129Magikarp.png'},
+{id: 'gyarados', name: 'Gyarados', image: 'https://cdn.bulbagarden.net/upload/4/41/130Gyarados.png'},
+{id: 'mega gyarados', name: 'Mega Gyarados', image: 'https://cdn.bulbagarden.net/upload/3/30/130Gyarados-Mega.png'},
+{id: 'lapras', name: 'Lapras', image: 'https://cdn.bulbagarden.net/upload/a/ab/131Lapras.png'},
+{id: 'gigantamax lapras', name: 'Gigantamax Lapras', image: 'https://cdn.bulbagarden.net/upload/1/15/131Lapras-Gigantamax.png'},
+{id: 'ditto', name: 'Ditto', image: 'https://cdn.bulbagarden.net/upload/3/36/132Ditto.png'},
+{id: 'eevee', name: 'Eevee', image: 'https://cdn.bulbagarden.net/upload/e/e2/133Eevee.png'},
+{id: 'gigantamax eevee', name: 'Gigantamax Eevee', image: 'https://cdn.bulbagarden.net/upload/2/2e/133Eevee-Gigantamax.png'},
+{id: 'vaporeon', name: 'Vaporeon', image: 'https://cdn.bulbagarden.net/upload/f/fd/134Vaporeon.png'},
+{id: 'jolteon', name: 'Jolteon', image: 'https://cdn.bulbagarden.net/upload/b/bb/135Jolteon.png'},
+{id: 'flareon', name: 'Flareon', image: 'https://cdn.bulbagarden.net/upload/d/dd/136Flareon.png'},
+{id: 'porygon', name: 'Porygon', image: 'https://cdn.bulbagarden.net/upload/6/6b/137Porygon.png'},
+{id: 'omanyte', name: 'Omanyte', image: 'https://cdn.bulbagarden.net/upload/7/79/138Omanyte.png'},
+{id: 'omastar', name: 'Omastar', image: 'https://cdn.bulbagarden.net/upload/4/43/139Omastar.png'},
+{id: 'kabuto', name: 'Kabuto', image: 'https://cdn.bulbagarden.net/upload/f/f9/140Kabuto.png'},
+{id: 'kabutops', name: 'Kabutops', image: 'https://cdn.bulbagarden.net/upload/2/29/141Kabutops.png'},
+{id: 'aerodactyl', name: 'Aerodactyl', image: 'https://cdn.bulbagarden.net/upload/e/e8/142Aerodactyl.png'},
+{id: 'mega aerodactyl', name: 'Mega Aerodactyl', image: 'https://cdn.bulbagarden.net/upload/a/a5/142Aerodactyl-Mega.png'},
+{id: 'snorlax', name: 'Snorlax', image: 'https://cdn.bulbagarden.net/upload/f/fb/143Snorlax.png'},
+{id: 'gigantamax snorlax', name: 'Gigantamax Snorlax', image: 'https://cdn.bulbagarden.net/upload/3/38/143Snorlax-Gigantamax.png'},
+{id: 'articuno', name: 'Articuno', image: 'https://cdn.bulbagarden.net/upload/4/4e/144Articuno.png'},
+{id: 'galarian articuno', name: 'Galarian Articuno', image: 'https://www.serebii.net/swordshield/articuno.jpg'},
+{id: 'zapdos', name: 'Zapdos', image: 'https://cdn.bulbagarden.net/upload/e/e3/145Zapdos.png'},
+{id: 'galarian zapdos', name: 'Galarian Zapdos', image: 'https://www.serebii.net/swordshield/zapdos.jpg'},
+{id: 'moltres', name: 'Moltres', image: 'https://cdn.bulbagarden.net/upload/1/1b/146Moltres.png'},
+{id: 'galarian moltres', name: 'Galarian Moltres', image: 'https://www.serebii.net/swordshield/moltres.jpg'},
+{id: 'dratini', name: 'Dratini', image: 'https://cdn.bulbagarden.net/upload/c/cc/147Dratini.png'},
+{id: 'dragonair', name: 'Dragonair', image: 'https://cdn.bulbagarden.net/upload/9/93/148Dragonair.png'},
+{id: 'dragonite', name: 'Dragonite', image: 'https://cdn.bulbagarden.net/upload/8/8b/149Dragonite.png'},
+{id: 'mewtwo', name: 'Mewtwo', image: 'https://cdn.bulbagarden.net/upload/7/78/150Mewtwo.png'},
+{id: 'mega mewtwo x', name: 'Mega Mewtwo X', image: 'https://cdn.bulbagarden.net/upload/7/7f/150Mewtwo-Mega_X.png'},
+{id: 'mega mewtwo y', name: 'Mega Mewtwo Y', image: 'https://cdn.bulbagarden.net/upload/5/5f/150Mewtwo-Mega_Y.png'},
+{id: 'mew', name: 'Mew', image: 'https://cdn.bulbagarden.net/upload/b/b1/151Mew.png'},
+{id: 'chikorita', name: 'Chikorita', image: 'https://cdn.bulbagarden.net/upload/b/bf/152Chikorita.png'},
+{id: 'bayleef', name: 'Bayleef', image: 'https://cdn.bulbagarden.net/upload/c/ca/153Bayleef.png'},
+{id: 'meganium', name: 'Meganium', image: 'https://cdn.bulbagarden.net/upload/d/d1/154Meganium.png'},
+{id: 'cyndaquil', name: 'Cyndaquil', image: 'https://cdn.bulbagarden.net/upload/9/9b/155Cyndaquil.png'},
+{id: 'quilava', name: 'Quilava', image: 'https://cdn.bulbagarden.net/upload/b/b6/156Quilava.png'},
+{id: 'typhlosion', name: 'Typhlosion', image: 'https://cdn.bulbagarden.net/upload/4/47/157Typhlosion.png'},
+{id: 'totodile', name: 'Totodile', image: 'https://cdn.bulbagarden.net/upload/d/df/158Totodile.png'},
+{id: 'croconaw', name: 'Croconaw', image: 'https://cdn.bulbagarden.net/upload/a/a5/159Croconaw.png'},
+{id: 'feraligatr', name: 'Feraligatr', image: 'https://cdn.bulbagarden.net/upload/d/d5/160Feraligatr.png'},
+{id: 'sentret', name: 'Sentret', image: 'https://cdn.bulbagarden.net/upload/c/c5/161Sentret.png'},
+{id: 'furret', name: 'Furret', image: 'https://cdn.bulbagarden.net/upload/4/4b/162Furret.png'},
+{id: 'hoothoot', name: 'Hoothoot', image: 'https://cdn.bulbagarden.net/upload/5/53/163Hoothoot.png'},
+{id: 'noctowl', name: 'Noctowl', image: 'https://cdn.bulbagarden.net/upload/f/fa/164Noctowl.png'},
+{id: 'ledyba', name: 'Ledyba', image: 'https://cdn.bulbagarden.net/upload/b/bb/165Ledyba.png'},
+{id: 'ledian', name: 'Ledian', image: 'https://cdn.bulbagarden.net/upload/5/5b/166Ledian.png'},
+{id: 'spinarak', name: 'Spinarak', image: 'https://cdn.bulbagarden.net/upload/7/75/167Spinarak.png'},
+{id: 'ariados', name: 'Ariados', image: 'https://cdn.bulbagarden.net/upload/7/76/168Ariados.png'},
+{id: 'crobat', name: 'Crobat', image: 'https://cdn.bulbagarden.net/upload/1/17/169Crobat.png'},
+{id: 'chinchou', name: 'Chinchou', image: 'https://cdn.bulbagarden.net/upload/d/d9/170Chinchou.png'},
+{id: 'lanturn', name: 'Lanturn', image: 'https://cdn.bulbagarden.net/upload/9/9b/171Lanturn.png'},
+{id: 'pichu', name: 'Pichu', image: 'https://cdn.bulbagarden.net/upload/b/b9/172Pichu.png'},
+{id: 'cleffa', name: 'Cleffa', image: 'https://cdn.bulbagarden.net/upload/e/e4/173Cleffa.png'},
+{id: 'igglybuff', name: 'Igglybuff', image: 'https://cdn.bulbagarden.net/upload/4/4d/174Igglybuff.png'},
+{id: 'togepi', name: 'Togepi', image: 'https://cdn.bulbagarden.net/upload/6/6b/175Togepi.png'},
+{id: 'togetic', name: 'Togetic', image: 'https://cdn.bulbagarden.net/upload/1/11/176Togetic.png'},
+{id: 'natu', name: 'Natu', image: 'https://cdn.bulbagarden.net/upload/5/5b/177Natu.png'},
+{id: 'xatu', name: 'Xatu', image: 'https://cdn.bulbagarden.net/upload/f/f4/178Xatu.png'},
+{id: 'mareep', name: 'Mareep', image: 'https://cdn.bulbagarden.net/upload/6/6b/179Mareep.png'},
+{id: 'flaaffy', name: 'Flaaffy', image: 'https://cdn.bulbagarden.net/upload/6/6f/180Flaaffy.png'},
+{id: 'ampharos', name: 'Ampharos', image: 'https://cdn.bulbagarden.net/upload/4/47/181Ampharos.png'},
+{id: 'mega ampharos', name: 'Mega Ampharos', image: 'https://cdn.bulbagarden.net/upload/a/a2/181Ampharos-Mega.png'},
+{id: 'bellossom', name: 'Bellossom', image: 'https://cdn.bulbagarden.net/upload/c/cd/182Bellossom.png'},
+{id: 'marill', name: 'Marill', image: 'https://cdn.bulbagarden.net/upload/4/42/183Marill.png'},
+{id: 'azumarill', name: 'Azumarill', image: 'https://cdn.bulbagarden.net/upload/a/a5/184Azumarill.png'},
+{id: 'sudowoodo', name: 'Sudowoodo', image: 'https://cdn.bulbagarden.net/upload/1/1e/185Sudowoodo.png'},
+{id: 'politoed', name: 'Politoed', image: 'https://cdn.bulbagarden.net/upload/a/a4/186Politoed.png'},
+{id: 'hoppip', name: 'Hoppip', image: 'https://cdn.bulbagarden.net/upload/f/f8/187Hoppip.png'},
+{id: 'skiploom', name: 'Skiploom', image: 'https://cdn.bulbagarden.net/upload/4/4f/188Skiploom.png'},
+{id: 'jumpluff', name: 'Jumpluff', image: 'https://cdn.bulbagarden.net/upload/5/5e/189Jumpluff.png'},
+{id: 'aipom', name: 'Aipom', image: 'https://cdn.bulbagarden.net/upload/4/42/190Aipom.png'},
+{id: 'sunkern', name: 'Sunkern', image: 'https://cdn.bulbagarden.net/upload/9/95/191Sunkern.png'},
+{id: 'sunflora', name: 'Sunflora', image: 'https://cdn.bulbagarden.net/upload/9/98/192Sunflora.png'},
+{id: 'yanma', name: 'Yanma', image: 'https://cdn.bulbagarden.net/upload/d/dd/193Yanma.png'},
+{id: 'wooper', name: 'Wooper', image: 'https://cdn.bulbagarden.net/upload/7/78/194Wooper.png'},
+{id: 'quagsire', name: 'Quagsire', image: 'https://cdn.bulbagarden.net/upload/a/a4/195Quagsire.png'},
+{id: 'espeon', name: 'Espeon', image: 'https://cdn.bulbagarden.net/upload/a/a7/196Espeon.png'},
+{id: 'umbreon', name: 'Umbreon', image: 'https://cdn.bulbagarden.net/upload/3/3d/197Umbreon.png'},
+{id: 'murkrow', name: 'Murkrow', image: 'https://cdn.bulbagarden.net/upload/3/33/198Murkrow.png'},
+{id: 'slowking', name: 'Slowking', image: 'https://cdn.bulbagarden.net/upload/e/e1/199Slowking.png'},
+{id: 'galarian slowking', name: 'Galarian Slowking', image: 'https://www.serebii.net/slowking.jpg'},
+{id: 'misdreavus', name: 'Misdreavus', image: 'https://cdn.bulbagarden.net/upload/b/be/200Misdreavus.png'},
+{id: 'unown', name: 'Unown', image: 'https://cdn.bulbagarden.net/upload/7/77/201Unown.png'},
+{id: 'wobbuffet', name: 'Wobbuffet', image: 'https://cdn.bulbagarden.net/upload/1/17/202Wobbuffet.png'},
+{id: 'girafarig', name: 'Girafarig', image: 'https://cdn.bulbagarden.net/upload/1/11/203Girafarig.png'},
+{id: 'pineco', name: 'Pineco', image: 'https://cdn.bulbagarden.net/upload/0/0b/204Pineco.png'},
+{id: 'forretress', name: 'Forretress', image: 'https://cdn.bulbagarden.net/upload/6/68/205Forretress.png'},
+{id: 'dunsparce', name: 'Dunsparce', image: 'https://cdn.bulbagarden.net/upload/2/20/206Dunsparce.png'},
+{id: 'gligar', name: 'Gligar', image: 'https://cdn.bulbagarden.net/upload/0/04/207Gligar.png'},
+{id: 'steelix', name: 'Steelix', image: 'https://cdn.bulbagarden.net/upload/b/ba/208Steelix.png'},
+{id: 'mega steelix', name: 'Mega Steelix', image: 'https://cdn.bulbagarden.net/upload/1/1b/208Steelix-Mega.png'},
+{id: 'snubbull', name: 'Snubbull', image: 'https://cdn.bulbagarden.net/upload/7/7f/209Snubbull.png'},
+{id: 'granbull', name: 'Granbull', image: 'https://cdn.bulbagarden.net/upload/b/b1/210Granbull.png'},
+{id: 'qwilfish', name: 'Qwilfish', image: 'https://cdn.bulbagarden.net/upload/2/21/211Qwilfish.png'},
+{id: 'scizor', name: 'Scizor', image: 'https://cdn.bulbagarden.net/upload/5/55/212Scizor.png'},
+{id: 'mega scizor', name: 'Mega Scizor', image: 'https://cdn.bulbagarden.net/upload/8/80/212Scizor-Mega.png'},
+{id: 'shuckle', name: 'Shuckle', image: 'https://cdn.bulbagarden.net/upload/c/c7/213Shuckle.png'},
+{id: 'heracross', name: 'Heracross', image: 'https://cdn.bulbagarden.net/upload/4/47/214Heracross.png'},
+{id: 'megaheracross', name: 'Mega Heracross', image: 'https://cdn.bulbagarden.net/upload/d/da/214Heracross-Mega.png'},
+{id: 'sneasel', name: 'Sneasel', image: 'https://cdn.bulbagarden.net/upload/7/71/215Sneasel.png'},
+{id: 'teddiursa', name: 'Teddiursa', image: 'https://cdn.bulbagarden.net/upload/e/e9/216Teddiursa.png'},
+{id: 'ursaring', name: 'Ursaring', image: 'https://cdn.bulbagarden.net/upload/e/e9/217Ursaring.png'},
+{id: 'slugma', name: 'Slugma', image: 'https://cdn.bulbagarden.net/upload/6/68/218Slugma.png'},
+{id: 'magcargo', name: 'Magcargo', image: 'https://cdn.bulbagarden.net/upload/6/65/219Magcargo.png'},
+{id: 'swinub', name: 'Swinub', image: 'https://cdn.bulbagarden.net/upload/b/b5/220Swinub.png'},
+{id: 'piloswine', name: 'Piloswine', image: 'https://cdn.bulbagarden.net/upload/4/49/221Piloswine.png'},
+{id: 'corsola', name: 'Corsola', image: 'https://cdn.bulbagarden.net/upload/f/fc/222Corsola.png'},
+{id: 'galarian corsola', name: 'Galarian Corsola', image: 'https://cdn.bulbagarden.net/upload/c/ce/222Corsola-Galar.png'},
+{id: 'remoraid', name: 'Remoraid', image: 'https://cdn.bulbagarden.net/upload/9/95/223Remoraid.png'},
+{id: 'octillery', name: 'Octillery', image: 'https://cdn.bulbagarden.net/upload/c/cb/224Octillery.png'},
+{id: 'delibird', name: 'Delibird', image: 'https://cdn.bulbagarden.net/upload/3/3f/225Delibird.png'},
+{id: 'mantine', name: 'Mantine', image: 'https://cdn.bulbagarden.net/upload/c/c5/226Mantine.png'},
+{id: 'skarmory', name: 'Skarmory', image: 'https://cdn.bulbagarden.net/upload/3/35/227Skarmory.png'},
+{id: 'houndour', name: 'Houndour', image: 'https://cdn.bulbagarden.net/upload/5/53/228Houndour.png'},
+{id: 'houndoom', name: 'Houndoom', image: 'https://cdn.bulbagarden.net/upload/5/51/229Houndoom.png'},
+{id: 'mega houndoom', name: 'Mega Houndoom', image: 'https://cdn.bulbagarden.net/upload/3/39/229Houndoom-Mega.png'},
+{id: 'kingdra', name: 'Kingdra', image: 'https://cdn.bulbagarden.net/upload/3/3c/230Kingdra.png'},
+{id: 'phanpy', name: 'Phanpy', image: 'https://cdn.bulbagarden.net/upload/d/d3/231Phanpy.png'},
+{id: 'donphan', name: 'Donphan', image: 'https://cdn.bulbagarden.net/upload/5/53/232Donphan.png'},
+{id: 'porygon2', name: 'Porygon 2', image: 'https://cdn.bulbagarden.net/upload/9/99/233Porygon2.png'},
+{id: 'stantler', name: 'Stantler', image: 'https://cdn.bulbagarden.net/upload/5/50/234Stantler.png'},
+{id: 'smeargle', name: 'Smeargle', image: 'https://cdn.bulbagarden.net/upload/9/92/235Smeargle.png'},
+{id: 'tyrogue', name: 'Tyrogue', image: 'https://cdn.bulbagarden.net/upload/c/c7/236Tyrogue.png'},
+{id: 'hitmontop', name: 'Hitmontop', image: 'https://cdn.bulbagarden.net/upload/9/94/237Hitmontop.png'},
+{id: 'smoochum', name: 'Smoochum', image: 'https://cdn.bulbagarden.net/upload/0/0e/238Smoochum.png'},
+{id: 'elekid', name: 'Elekid', image: 'https://cdn.bulbagarden.net/upload/5/5d/239Elekid.png'},
+{id: 'magby', name: 'Magby', image: 'https://cdn.bulbagarden.net/upload/c/cb/240Magby.png'},
+{id: 'miltank', name: 'Miltank', image: 'https://cdn.bulbagarden.net/upload/1/13/241Miltank.png'},
+{id: 'blissey', name: 'Blissey', image: 'https://cdn.bulbagarden.net/upload/5/56/242Blissey.png'},
+{id: 'raikou', name: 'Raikou', image: 'https://cdn.bulbagarden.net/upload/c/c1/243Raikou.png'},
+{id: 'entei', name: 'Entei', image: 'https://cdn.bulbagarden.net/upload/f/f9/244Entei.png'},
+{id: 'suicune', name: 'Suicune', image: 'https://cdn.bulbagarden.net/upload/d/da/245Suicune.png'},
+{id: 'larvitar', name: 'Larvitar', image: 'https://cdn.bulbagarden.net/upload/7/70/246Larvitar.png'},
+{id: 'pupitar', name: 'Pupitar', image: 'https://cdn.bulbagarden.net/upload/a/a1/247Pupitar.png'},
+{id: 'tyranitar', name: 'Tyranitar', image: 'https://cdn.bulbagarden.net/upload/8/82/248Tyranitar.png'},
+{id: 'mega tyranitar', name: 'Mega Tyranitar', image: 'https://cdn.bulbagarden.net/upload/0/0d/248Tyranitar-Mega.png'},
+{id: 'lugia', name: 'Lugia', image: 'https://cdn.bulbagarden.net/upload/4/44/249Lugia.png'},
+{id: 'hooh', name: 'Ho-oh', image: 'https://cdn.bulbagarden.net/upload/6/67/250Ho-Oh.png'},
+{id: 'celebi', name: 'Celebi', image: 'https://cdn.bulbagarden.net/upload/e/e7/251Celebi.png'},
+{id: 'treecko', name: 'Treecko', image: 'https://cdn.bulbagarden.net/upload/2/2c/252Treecko.png'},
+{id: 'grovyle', name: 'Grovyle', image: 'https://cdn.bulbagarden.net/upload/e/ea/253Grovyle.png'},
+{id: 'sceptile', name: 'Sceptile', image: 'https://cdn.bulbagarden.net/upload/3/3e/254Sceptile.png'},
+{id: 'mega sceptile', name: 'Mega Sceptile', image: 'https://cdn.bulbagarden.net/upload/6/67/254Sceptile-Mega.png'},
+{id: 'torchic', name: 'Torchic', image: 'https://cdn.bulbagarden.net/upload/9/91/255Torchic.png'},
+{id: 'combusken', name: 'Combusken', image: 'https://cdn.bulbagarden.net/upload/2/29/256Combusken.png'},
+{id: 'blaziken', name: 'Blaziken', image: 'https://cdn.bulbagarden.net/upload/9/90/257Blaziken.png'},
+{id: 'mega blaziken', name: 'Mega Blaziken', image: 'https://cdn.bulbagarden.net/upload/f/fa/257Blaziken-Mega.png'},
+{id: 'mudkip', name: 'Mudkip', image: 'https://cdn.bulbagarden.net/upload/6/60/258Mudkip.png'},
+{id: 'marshtomp', name: 'Marshtomp', image: 'https://cdn.bulbagarden.net/upload/2/27/259Marshtomp.png'},
+{id: 'swampert', name: 'Swampert', image: 'https://cdn.bulbagarden.net/upload/b/b6/260Swampert.png'},
+{id: 'mega swampert', name: 'Mega Swampert', image: 'https://cdn.bulbagarden.net/upload/9/98/260Swampert-Mega.png'},
+{id: 'poochyena', name: 'Poochyena', image: 'https://cdn.bulbagarden.net/upload/f/fc/261Poochyena.png'},
+{id: 'mightyena', name: 'Mightyena', image: 'https://cdn.bulbagarden.net/upload/f/f1/262Mightyena.png'},
+{id: 'zigzagoon', name: 'Zigzagoon', image: 'https://cdn.bulbagarden.net/upload/4/47/263Zigzagoon.png'},
+{id: 'galarian zigzagoon', name: 'Galarian Zigzagoon', image: 'https://cdn.bulbagarden.net/upload/b/b0/263Zigzagoon-Galar.png'},
+{id: 'linoone', name: 'Linoone', image: 'https://cdn.bulbagarden.net/upload/f/f7/264Linoone.png'},
+{id: 'galarian linoone', name: 'Galarian Linoone', image: 'https://cdn.bulbagarden.net/upload/8/8e/264Linoone-Galar.png'},
+{id: 'wurmple', name: 'Wurmple', image: 'https://cdn.bulbagarden.net/upload/7/76/265Wurmple.png'},
+{id: 'silcoon', name: 'Silcoon', image: 'https://cdn.bulbagarden.net/upload/e/ef/266Silcoon.png'},
+{id: 'beautifly', name: 'Beautifly', image: 'https://cdn.bulbagarden.net/upload/4/4c/267Beautifly.png'},
+{id: 'cascoon', name: 'Cascoon', image: 'https://cdn.bulbagarden.net/upload/a/a3/268Cascoon.png'},
+{id: 'dustox', name: 'Dustox', image: 'https://cdn.bulbagarden.net/upload/3/34/269Dustox.png'},
+{id: 'lotad', name: 'Lotad', image: 'https://cdn.bulbagarden.net/upload/e/ee/270Lotad.png'},
+{id: 'lombre', name: 'Lombre', image: 'https://cdn.bulbagarden.net/upload/8/8b/271Lombre.png'},
+{id: 'ludicolo', name: 'Ludicolo', image: 'https://cdn.bulbagarden.net/upload/f/ff/272Ludicolo.png'},
+{id: 'seedot', name: 'Seedot', image: 'https://cdn.bulbagarden.net/upload/8/84/273Seedot.png'},
+{id: 'nuzleaf', name: 'Nuzleaf', image: 'https://cdn.bulbagarden.net/upload/0/07/274Nuzleaf.png'},
+{id: 'shiftry', name: 'Shiftry', image: 'https://cdn.bulbagarden.net/upload/f/f7/275Shiftry.png'},
+{id: 'taillow', name: 'Taillow', image: 'https://cdn.bulbagarden.net/upload/e/e4/276Taillow.png'},
+{id: 'swellow', name: 'Swellow', image: 'https://cdn.bulbagarden.net/upload/4/45/277Swellow.png'},
+{id: 'wingull', name: 'Wingull', image: 'https://cdn.bulbagarden.net/upload/3/39/278Wingull.png'},
+{id: 'pelipper', name: 'Pelipper', image: 'https://cdn.bulbagarden.net/upload/f/f2/279Pelipper.png'},
+{id: 'ralts', name: 'Ralts', image: 'https://cdn.bulbagarden.net/upload/e/e1/280Ralts.png'},
+{id: 'kirlia', name: 'Kirlia', image: 'https://cdn.bulbagarden.net/upload/0/00/281Kirlia.png'},
+{id: 'gardevoir', name: 'Gardevoir', image: 'https://cdn.bulbagarden.net/upload/9/99/282Gardevoir.png'},
+{id: 'mega gardevoir', name: 'Mega Gardevoir', image: 'https://cdn.bulbagarden.net/upload/2/20/282Gardevoir-Mega.png'},
+{id: 'surskit', name: 'Surskit', name: 'surskit', image: 'https://cdn.bulbagarden.net/upload/f/f6/283Surskit.png'},
+{id: 'masquerain', name: 'Masquerain', image: 'https://cdn.bulbagarden.net/upload/0/0a/284Masquerain.png'},
+{id: 'shroomish', name: 'Shroomish', image: 'https://cdn.bulbagarden.net/upload/d/d8/285Shroomish.png'},
+{id: 'breloom', name: 'Breloom', image: 'https://cdn.bulbagarden.net/upload/d/de/286Breloom.png'},
+{id: 'slakoth', name: 'Slakoth', image: 'https://cdn.bulbagarden.net/upload/d/d2/287Slakoth.png'},
+{id: 'vigoroth', name: 'Vigoroth', image: 'https://cdn.bulbagarden.net/upload/6/61/288Vigoroth.png'},
+{id: 'slaking', name: 'Slaking', image: 'https://cdn.bulbagarden.net/upload/7/71/289Slaking.png'},
+{id: 'nincada', name: 'Nincada', image: 'https://cdn.bulbagarden.net/upload/9/90/290Nincada.png'},
+{id: 'ninjask', name: 'Ninjask', image: 'https://cdn.bulbagarden.net/upload/7/76/291Ninjask.png'},
+{id: 'shedinja', name: 'Shedinja', image: 'https://cdn.bulbagarden.net/upload/5/59/292Shedinja.png'},
+{id: 'whismur', name: 'Whismur', image: 'https://cdn.bulbagarden.net/upload/6/6c/293Whismur.png'},
+{id: 'loudred', name: 'Loudred', image: 'https://cdn.bulbagarden.net/upload/1/12/294Loudred.png'},
+{id: 'exploud', name: 'Exploud', image: 'https://cdn.bulbagarden.net/upload/1/12/295Exploud.png'},
+{id: 'makuhita', name: 'Makuhita', image: 'https://cdn.bulbagarden.net/upload/b/b6/296Makuhita.png'},
+{id: 'hariyama', name: 'Hariyama', image: 'https://cdn.bulbagarden.net/upload/6/6f/297Hariyama.png'},
+{id: 'azurill', name: 'Azurill', image: 'https://cdn.bulbagarden.net/upload/a/ac/298Azurill.png'},
+{id: 'nosepass', name: 'Nosepass', image: 'https://cdn.bulbagarden.net/upload/8/89/299Nosepass.png'},
+{id: 'skitty', name: 'Skitty', image: 'https://cdn.bulbagarden.net/upload/8/8a/300Skitty.png'},
+{id: 'delcatty', name: 'Delcatty', image: 'https://cdn.bulbagarden.net/upload/f/f4/301Delcatty.png'},
+{id: 'sableye', name: 'Sableye', image: 'https://cdn.bulbagarden.net/upload/d/d3/302Sableye.png'},
+{id: 'mega sableye', name: 'Mega Sableye', image: 'https://cdn.bulbagarden.net/upload/e/e9/302Sableye-Mega.png'},
+{id: 'mawile', name: 'Mawile', image: 'https://cdn.bulbagarden.net/upload/c/c0/303Mawile.png'},
+{id: 'mega mawile', name: 'Mega Mawile', image: 'https://cdn.bulbagarden.net/upload/8/86/303Mawile-Mega.png'},
+{id: 'aron', name: 'Aron', image: 'https://cdn.bulbagarden.net/upload/b/bb/304Aron.png'},
+{id: 'lairon', name: 'Lairon', image: 'https://cdn.bulbagarden.net/upload/b/bf/305Lairon.png'},
+{id: 'aggron', name: 'Aggron', image: 'https://cdn.bulbagarden.net/upload/6/6d/306Aggron.png'},
+{id: 'mega aggron', name: 'Mega Aggron', image: 'https://cdn.bulbagarden.net/upload/1/10/306Aggron-Mega.png'},
+{id: 'meditite', name: 'Meditite', image: 'https://cdn.bulbagarden.net/upload/7/71/307Meditite.png'},
+{id: 'medicham', name: 'Medicham', image: 'https://cdn.bulbagarden.net/upload/0/05/308Medicham.png'},
+{id: 'mega medicham', name: 'Mega Medicham', image: 'https://cdn.bulbagarden.net/upload/c/cd/308Medicham-Mega.png'},
+{id: 'electrike', name: 'Electrike', image: 'https://cdn.bulbagarden.net/upload/4/47/309Electrike.png'},
+{id: 'manectric', name: 'Manectric', image: 'https://cdn.bulbagarden.net/upload/b/bb/310Manectric.png'},
+{id: 'mega manectric', name: 'Mega Manectric', image: 'https://cdn.bulbagarden.net/upload/b/bc/310Manectric-Mega.png'},
+{id: 'plusle', name: 'Plusle', image: 'https://cdn.bulbagarden.net/upload/a/a3/311Plusle.png'},
+{id: 'minun', name: 'Minun', image: 'https://cdn.bulbagarden.net/upload/e/e7/312Minun.png'},
+{id: 'volbeat', name: 'Volbeat', image: 'https://cdn.bulbagarden.net/upload/d/d6/313Volbeat.png'},
+{id: 'illumise', name: 'Illumise', image: 'https://cdn.bulbagarden.net/upload/5/55/314Illumise.png'},
+{id: 'roselia', name: 'Roselia', image: 'https://cdn.bulbagarden.net/upload/f/f1/315Roselia.png'},
+{id: 'gulpin', name: 'Gulpin', image: 'https://cdn.bulbagarden.net/upload/f/f0/316Gulpin.png'},
+{id: 'swalot', name: 'Swalot', image: 'https://cdn.bulbagarden.net/upload/a/ad/317Swalot.png'},
+{id: 'carvanha', name: 'Carvanha', image: 'https://cdn.bulbagarden.net/upload/9/98/318Carvanha.png'},
+{id: 'sharpedo', name: 'Sharpedo', image: 'https://cdn.bulbagarden.net/upload/a/a8/319Sharpedo.png'},
+{id: 'mega sharpedo', name: 'Mega Sharpedo', image: 'https://cdn.bulbagarden.net/upload/3/35/319Sharpedo-Mega.png'},
+{id: 'wailmer', name: 'Wailmer', image: 'https://cdn.bulbagarden.net/upload/7/71/320Wailmer.png'},
+{id: 'wailord', name: 'Wailord', image: 'https://cdn.bulbagarden.net/upload/b/b9/321Wailord.png'},
+{id: 'numel', name: 'Numel', image: 'https://cdn.bulbagarden.net/upload/c/c6/322Numel.png'},
+{id: 'camerupt', name: 'Camerupt', image: 'https://cdn.bulbagarden.net/upload/7/7d/323Camerupt.png'},
+{id: 'mega camerupt', name: 'Mega Camerupt', image: 'https://cdn.bulbagarden.net/upload/9/96/323Camerupt-Mega.png'},
+{id: 'torkoal', name: 'Torkoal', image: 'https://cdn.bulbagarden.net/upload/3/3b/324Torkoal.png'},
+{id: 'spoink', name: 'Spoink', image: 'https://cdn.bulbagarden.net/upload/9/9e/325Spoink.png'},
+{id: 'grumpig', name: 'Grumpig', image: 'https://cdn.bulbagarden.net/upload/5/54/326Grumpig.png'},
+{id: 'spinda', name: 'Spinda', image: 'https://cdn.bulbagarden.net/upload/8/8f/327Spinda.png'},
+{id: 'trapinch', name: 'Trapinch', image: 'https://cdn.bulbagarden.net/upload/7/76/328Trapinch.png'},
+{id: 'vibrava', name: 'Vibrava', image: 'https://cdn.bulbagarden.net/upload/a/af/329Vibrava.png'},
+{id: 'flygon', name: 'Flygon', image: 'https://cdn.bulbagarden.net/upload/f/f1/330Flygon.png'},
+{id: 'cacnea', name: 'Cacnea', image: 'https://cdn.bulbagarden.net/upload/1/12/331Cacnea.png'},
+{id: 'cacturne', name: 'Cacturne', image: 'https://cdn.bulbagarden.net/upload/4/41/332Cacturne.png'},
+{id: 'swablu', name: 'Swablu', image: 'https://cdn.bulbagarden.net/upload/9/99/333Swablu.png'},
+{id: 'altaria', name: 'Altaria', image: 'https://cdn.bulbagarden.net/upload/d/da/334Altaria.png'},
+{id: 'mega altaria', name: 'Mega Altaria', image: 'https://cdn.bulbagarden.net/upload/0/08/334Altaria-Mega.png'},
+{id: 'zangoose', name: 'Zangoose', image: 'https://cdn.bulbagarden.net/upload/d/d3/335Zangoose.png'},
+{id: 'seviper', name: 'Seviper', image: 'https://cdn.bulbagarden.net/upload/d/d6/336Seviper.png'},
+{id: 'lunatone', name: 'Lunatone', image: 'https://cdn.bulbagarden.net/upload/e/eb/337Lunatone.png'},
+{id: 'solrock', name: 'Solrock', image: 'https://cdn.bulbagarden.net/upload/9/90/338Solrock.png'},
+{id: 'barboach', name: 'Barboach', image: 'https://cdn.bulbagarden.net/upload/6/60/339Barboach.png'},
+{id: 'whiscash', name: 'Whiscash', image: 'https://cdn.bulbagarden.net/upload/6/60/340Whiscash.png'},
+{id: 'corphis', name: 'Corphish', image: 'https://cdn.bulbagarden.net/upload/3/3d/341Corphish.png'},
+{id: 'crawdaunt', name: 'Crawdaunt', image: 'https://cdn.bulbagarden.net/upload/f/f4/342Crawdaunt.png'},
+{id: 'baltoy', name: 'Baltoy', image: 'https://cdn.bulbagarden.net/upload/8/8b/343Baltoy.png'},
+{id: 'claydol', name: 'Claydol', image: 'https://cdn.bulbagarden.net/upload/0/07/344Claydol.png'},
+{id: 'lileep', name: 'Lileep', image: 'https://cdn.bulbagarden.net/upload/3/34/345Lileep.png'},
+{id: 'cradily', name: 'Cradily', image: 'https://cdn.bulbagarden.net/upload/3/38/346Cradily.png'},
+{id: 'anorith', name: 'Anorith', image: 'https://cdn.bulbagarden.net/upload/4/45/347Anorith.png'},
+{id: 'armaldo', name: 'Armaldo', image: 'https://cdn.bulbagarden.net/upload/1/1d/348Armaldo.png'},
+{id: 'feebas', name: 'Feebas', image: 'https://cdn.bulbagarden.net/upload/4/4b/349Feebas.png'},
+{id: 'milotic', name: 'Milotic', image: 'https://cdn.bulbagarden.net/upload/3/36/350Milotic.png'},
+{id: 'castform', name: 'Castform', image: 'https://cdn.bulbagarden.net/upload/f/f3/351Castform.png'},
+{id: 'castform sunny form', name: 'Castform Sunny Form', image: 'https://cdn.bulbagarden.net/upload/b/b6/351Castform-Sunny.png'},
+{id: 'castform rainy form', name: 'Castform Rainy Form', image: 'https://cdn.bulbagarden.net/upload/8/89/351Castform-Rainy.png'},
+{id: 'castform snowy form', name: 'Castform Snowy Form', image: 'https://cdn.bulbagarden.net/upload/f/f9/351Castform-Snowy.png'},
+{id: 'kecleon', name: 'Kecleon', image: 'https://cdn.bulbagarden.net/upload/5/50/352Kecleon.png'},
+{id: 'shuppet', name: 'Shuppet', image: 'https://cdn.bulbagarden.net/upload/4/4b/353Shuppet.png'},
+{id: 'banette', name: 'Banette', image: 'https://cdn.bulbagarden.net/upload/0/0a/354Banette.png'},
+{id: 'mega banette', name: 'Mega Banette', image: 'https://cdn.bulbagarden.net/upload/a/a3/354Banette-Mega.png'},
+{id: 'duskull', name: 'Duskull', image: 'https://cdn.bulbagarden.net/upload/e/e2/355Duskull.png'},
+{id: 'dusclops', name: 'Dusclops', image: 'https://cdn.bulbagarden.net/upload/1/12/356Dusclops.png'},
+{id: 'tropius', name: 'Tropius', image: 'https://cdn.bulbagarden.net/upload/d/dd/357Tropius.png'},
+{id: 'chimecho', name: 'Chimecho', image: 'https://cdn.bulbagarden.net/upload/e/e5/358Chimecho.png'},
+{id: 'absol', name: 'Absol', image: 'https://cdn.bulbagarden.net/upload/0/00/359Absol.png'},
+{id: 'mega absol', name: 'Mega Absol', image: 'https://cdn.bulbagarden.net/upload/f/f4/359Absol-Mega.png'},
+{id: 'wynaut', name: 'Wynaut', image: 'https://cdn.bulbagarden.net/upload/d/d0/360Wynaut.png'},
+{id: 'snorunt', name: 'Snorunt', image: 'https://cdn.bulbagarden.net/upload/6/6b/361Snorunt.png'},
+{id: 'glalie', name: 'Glalie', image: 'https://cdn.bulbagarden.net/upload/6/62/362Glalie.png'},
+{id: 'mega glalie', name: 'Mega Glalie', image: 'https://cdn.bulbagarden.net/upload/0/0d/362Glalie-Mega.png'},
+{id: 'spheal', name: 'Spheal', image: 'https://cdn.bulbagarden.net/upload/9/9f/363Spheal.png'},
+{id: 'sealeo', name: 'Sealeo', image: 'https://cdn.bulbagarden.net/upload/f/f6/364Sealeo.png'},
+{id: 'walrein', name: 'Walrein', image: 'https://cdn.bulbagarden.net/upload/6/61/365Walrein.png'},
+{id: 'clamperl', name: 'Clamperl', image: 'https://cdn.bulbagarden.net/upload/1/11/366Clamperl.png'},
+{id: 'huntail', name: 'Huntail', image: 'https://cdn.bulbagarden.net/upload/1/11/367Huntail.png'},
+{id: 'gorebyss', name: 'Gorebyss', image: 'https://cdn.bulbagarden.net/upload/3/37/368Gorebyss.png'},
+{id: 'relicanth', name: 'Relicanth', image: 'https://cdn.bulbagarden.net/upload/7/78/369Relicanth.png'},
+{id: 'luvdisc', name: 'Luvdisc', image: 'https://cdn.bulbagarden.net/upload/1/1d/370Luvdisc.png'},
+{id: 'bagon', name: 'Bagon', image: 'https://cdn.bulbagarden.net/upload/d/d2/371Bagon.png'},
+{id: 'shelgon', name: 'Shelgon', image: 'https://cdn.bulbagarden.net/upload/a/a5/372Shelgon.png'},
+{id: 'salamence', name: 'Salamence', image: 'https://cdn.bulbagarden.net/upload/4/41/373Salamence.png'},
+{id: 'mega salamence', name: 'Mega Salamence', image: 'https://cdn.bulbagarden.net/upload/f/f3/373Salamence-Mega.png'},
+{id: 'beldum', name: 'Beldum', image: 'https://cdn.bulbagarden.net/upload/d/d4/374Beldum.png'},
+{id: 'metang', name: 'Metang', image: 'https://cdn.bulbagarden.net/upload/6/62/375Metang.png'},
+{id: 'metagross', name: 'Metagross', image: 'https://cdn.bulbagarden.net/upload/0/05/376Metagross.png'},
+{id: 'mega metagross', name: 'Mega Metagross', image: 'https://cdn.bulbagarden.net/upload/8/85/376Metagross-Mega.png'},
+{id: 'regirock', name: 'Regirock', image: 'https://cdn.bulbagarden.net/upload/a/aa/377Regirock.png'},
+{id: 'regice', name: 'Regice', image: 'https://cdn.bulbagarden.net/upload/f/fe/378Regice.png'},
+{id: 'registeel', name: 'Registeel', image: 'https://cdn.bulbagarden.net/upload/2/22/379Registeel.png'},
+{id: 'latias', name: 'Latias', image: 'https://cdn.bulbagarden.net/upload/2/24/380Latias.png'},
+{id: 'mega latias', name: 'Mega Latias', image: 'https://cdn.bulbagarden.net/upload/0/0f/380Latias-Mega.png'},
+{id: 'latios', name: 'Latios', image: 'https://cdn.bulbagarden.net/upload/5/52/381Latios.png'},
+{id: 'mega latios', name: 'Mega Latios', image: 'https://cdn.bulbagarden.net/upload/a/a0/381Latios-Mega.png'},
+{id: 'kyogre', name: 'Kyogre', image: 'https://cdn.bulbagarden.net/upload/4/41/382Kyogre.png'},
+{id: 'primal kyogre', name: 'Primal Kyogre', image: 'https://cdn.bulbagarden.net/upload/f/f1/382Kyogre-Primal.png'},
+{id: 'groudon', name: 'Groudon', image: 'https://cdn.bulbagarden.net/upload/7/70/383Groudon.png'},
+{id: 'primal groudon', name: 'Primal Groudon', image: 'https://cdn.bulbagarden.net/upload/9/9d/383Groudon-Primal.png'},
+{id: 'rayquaza', name: 'Rayquaza', image: 'https://cdn.bulbagarden.net/upload/e/e4/384Rayquaza.png'},
+{id: 'mega rayquaza', name: 'Mega Rayquaza', image: 'https://cdn.bulbagarden.net/upload/5/58/384Rayquaza-Mega.png'},
+{id: 'jirachi', name: 'Jirachi', image: 'https://cdn.bulbagarden.net/upload/8/85/385Jirachi.png'},
+{id: 'deoxys', name: 'Deoxys', image: 'https://cdn.bulbagarden.net/upload/e/e7/386Deoxys.png'},
+{id: 'attack forme deoxys', name: 'Attack Form Deoxys', image: 'https://cdn.bulbagarden.net/upload/d/d8/386Deoxys-Attack.png'},
+{id: 'defense forme deoxys', name: 'Defense Form Deoxys', image: 'https://cdn.bulbagarden.net/upload/c/cc/386Deoxys-Defense.png'},
+{id: 'speed forme deoxys', name: 'Speed Form Deoxys', image: 'https://cdn.bulbagarden.net/upload/2/2b/386Deoxys-Speed.png'},
+{id: 'turtwig', name: 'Turtwig', image: 'https://cdn.bulbagarden.net/upload/5/5c/387Turtwig.png'},
+{id: 'grotle', name: 'Grotle', image: 'https://cdn.bulbagarden.net/upload/5/53/388Grotle.png'},
+{id: 'torterra', name: 'Torterra', image: 'https://cdn.bulbagarden.net/upload/d/df/389Torterra.png'},
+{id: 'chimchar', name: 'Chimchar', image: 'https://cdn.bulbagarden.net/upload/7/76/390Chimchar.png'},
+{id: 'monferno', name: 'Monferno', image: 'https://cdn.bulbagarden.net/upload/2/2e/391Monferno.png'},
+{id: 'infernape', name: 'Infernape', image: 'https://cdn.bulbagarden.net/upload/f/fb/392Infernape.png'},
+{id: 'piplup', name: 'Piplup', image: 'https://cdn.bulbagarden.net/upload/b/b1/393Piplup.png'},
+{id: 'prinplup', name: 'Prinplup', image: 'https://cdn.bulbagarden.net/upload/d/df/394Prinplup.png'},
+{id: 'empoleon', name: 'Empoleon', image: 'https://cdn.bulbagarden.net/upload/7/7f/395Empoleon.png'},
+{id: 'starly', name: 'Starly', image: 'https://cdn.bulbagarden.net/upload/a/af/396Starly.png'},
+{id: 'staravia', name: 'Staravia', image: 'https://cdn.bulbagarden.net/upload/f/f8/397Staravia.png'},
+{id: 'staraptor', name: 'Staraptor', image: 'https://cdn.bulbagarden.net/upload/5/5e/398Staraptor.png'},
+{id: 'bidoof', name: 'Bidoof', image: 'https://cdn.bulbagarden.net/upload/f/f5/399Bidoof.png'},
+{id: 'bibarel', name: 'Bibarel', image: 'https://cdn.bulbagarden.net/upload/9/91/400Bibarel.png'},
+{id: 'kricketot', name: 'Kricketot', image: 'https://cdn.bulbagarden.net/upload/3/33/401Kricketot.png'},
+{id: 'kricketune', name: 'Kricketune', image: 'https://cdn.bulbagarden.net/upload/e/e5/402Kricketune.png'},
+{id: 'shinx', name: 'Shinx', image: 'https://cdn.bulbagarden.net/upload/3/32/403Shinx.png'},
+{id: 'luxio', name: 'Luxio', image: 'https://cdn.bulbagarden.net/upload/4/49/404Luxio.png'},
+{id: 'luxray', name: 'Luxray', image: 'https://cdn.bulbagarden.net/upload/a/a7/405Luxray.png'},
+{id: 'budew', name: 'Budew', image: 'https://cdn.bulbagarden.net/upload/d/d3/406Budew.png'},
+{id: 'roserade', name: 'Roserade', image: 'https://cdn.bulbagarden.net/upload/0/05/407Roserade.png'},
+{id: 'cranidos', name: 'Cranidos', image: 'https://cdn.bulbagarden.net/upload/c/cd/408Cranidos.png'},
+{id: 'rampardos', name: 'Rampardos', image: 'https://cdn.bulbagarden.net/upload/8/8a/409Rampardos.png'},
+{id: 'shieldon', name: 'Shieldon', image: 'https://cdn.bulbagarden.net/upload/e/e2/410Shieldon.png'},
+{id: 'bastiodon', name: 'Bastiodon', image: 'https://cdn.bulbagarden.net/upload/b/bc/411Bastiodon.png'},
+{id: 'burmy plant', name: 'Burmy Plant Cloak', image: 'https://cdn.bulbagarden.net/upload/c/c9/412Burmy-Plant.png'},
+{id: 'burmy sand', name: 'Burmy Sandy Cloak', image: 'https://cdn.bulbagarden.net/upload/1/1f/412Burmy-Sandy.png'},
+{id: 'burmy trash', name: 'Burmy Trash Cloak', image: 'https://cdn.bulbagarden.net/upload/8/8e/412Burmy-Trash.png'},
+{id: 'wormadam plant', name: 'Wormadam Plant Cloak', image: 'https://cdn.bulbagarden.net/upload/d/db/413Wormadam-Plant.png'},
+{id: 'wormadam sandy', name: 'Wormadam Sandy Cloak', image: 'https://cdn.bulbagarden.net/upload/1/1c/413Wormadam-Sandy.png'},
+{id: 'wormadam trash', name: 'Wormadam Trash Cloak', image: 'https://cdn.bulbagarden.net/upload/0/0b/413Wormadam-Trash.png'},
+{id: 'mothim', name: 'Mothim', image: 'https://cdn.bulbagarden.net/upload/1/18/414Mothim.png'},
+{id: 'combee', name: 'Combee', image: 'https://cdn.bulbagarden.net/upload/b/b6/415Combee.png'},
+{id: 'vespiquen', name: 'Vespiquen', image: 'https://cdn.bulbagarden.net/upload/2/2c/416Vespiquen.png'},
+{id: 'pachirisu', name: 'Pachirisu', image: 'https://cdn.bulbagarden.net/upload/f/f4/417Pachirisu.png'},
+{id: 'buizel', name: 'Buizel', image: 'https://cdn.bulbagarden.net/upload/8/83/418Buizel.png'},
+{id: 'floatzel', name: 'Floatzel', image: 'https://cdn.bulbagarden.net/upload/b/bf/419Floatzel.png'},
+{id: 'cherubi', name: 'Cherubi', image: 'https://cdn.bulbagarden.net/upload/a/a7/420Cherubi.png'},
+{id: 'cherrim overcast', name: 'Cherrim Overcast Form', image: 'https://cdn.bulbagarden.net/upload/2/25/421Cherrim-Overcast.png'},
+{id: 'cherrim sunny', name: 'Cherrim Sunshine Form', image: 'https://cdn.bulbagarden.net/upload/b/bc/421Cherrim-Sunny.png'},
+{id: 'west shellos', name: 'West Sea Shellos', image: 'https://cdn.bulbagarden.net/upload/7/71/422Shellos-West.png'},
+{id: 'east shellos', name: 'East Sea Shellos', image: 'https://cdn.bulbagarden.net/upload/d/d5/422Shellos-East.png'},
+{id: 'west gastrodon', name: 'West Sea Gastrodon', image: 'https://cdn.bulbagarden.net/upload/1/1d/423Gastrodon-West.png'},
+{id: 'east gastrodon', name: 'East Sea Gastrodon', image: 'https://cdn.bulbagarden.net/upload/1/1b/423Gastrodon-East.png'},
+{id: 'ambipom', name: 'Ambipom', image: 'https://cdn.bulbagarden.net/upload/8/86/424Ambipom.png'},
+{id: 'drifloon', name: 'Drifloon', image: 'https://cdn.bulbagarden.net/upload/e/eb/425Drifloon.png'},
+{id: 'drifblim', name: 'Drifblim', image: 'https://cdn.bulbagarden.net/upload/7/71/426Drifblim.png'},
+{id: 'buneary', name: 'Buneary', image: 'https://cdn.bulbagarden.net/upload/a/a7/427Buneary.png'},
+{id: 'lopunny', name: 'Lopunny', image: 'https://cdn.bulbagarden.net/upload/c/c9/428Lopunny.png'},
+{id: 'mega lopunny', name: 'Mega Lopunny', image: 'https://cdn.bulbagarden.net/upload/d/dc/428Lopunny-Mega.png'},
+{id: 'mismagius', name: 'Mismagius', image: 'https://cdn.bulbagarden.net/upload/b/b4/429Mismagius.png'},
+{id: 'honchkrow', name: 'Honchkrow', image: 'https://cdn.bulbagarden.net/upload/4/46/430Honchkrow.png'},
+{id: 'glameow', name: 'Glameow', image: 'https://cdn.bulbagarden.net/upload/2/26/431Glameow.png'},
+{id: 'purugly', name: 'Purugly', image: 'https://cdn.bulbagarden.net/upload/8/80/432Purugly.png'},
+{id: 'chingling', name: 'Chingling', image: 'https://cdn.bulbagarden.net/upload/e/ed/433Chingling.png'},
+{id: 'stunky', name: 'Stunky', image: 'https://cdn.bulbagarden.net/upload/7/75/434Stunky.png'},
+{id: 'skuntank', name: 'Skuntank', image: 'https://cdn.bulbagarden.net/upload/b/bc/435Skuntank.png'},
+{id: 'bronzor', name: 'Bronzor', image: 'https://cdn.bulbagarden.net/upload/c/c1/436Bronzor.png'},
+{id: 'bronzong', name: 'Bronzong', image: 'https://cdn.bulbagarden.net/upload/a/aa/437Bronzong.png'},
+{id: 'bonsly', name: 'Bonsly', image: 'https://cdn.bulbagarden.net/upload/e/e2/438Bonsly.png'},
+{id: 'mime jr', name: 'Mime Jr', image: 'https://cdn.bulbagarden.net/upload/3/37/439Mime_Jr.png'},
+{id: 'happiny', name: 'Happiny', image: 'https://cdn.bulbagarden.net/upload/2/27/440Happiny.png'},
+{id: 'chatot', name: 'Chatot', image: 'https://cdn.bulbagarden.net/upload/b/bf/441Chatot.png'},
+{id: 'spiritomb', name: 'Spiritomb', image: 'https://cdn.bulbagarden.net/upload/8/8e/442Spiritomb.png'},
+{id: 'gible', name: 'Gible', image: 'https://cdn.bulbagarden.net/upload/6/68/443Gible.png'},
+{id: 'gabite', name: 'Gabite', image: 'https://cdn.bulbagarden.net/upload/9/9d/444Gabite.png'},
+{id: 'garchomp', name: 'Garchomp', image: 'https://cdn.bulbagarden.net/upload/f/fa/445Garchomp.png'},
+{id: 'mega garchomp', name: 'Mega Garchomp', image: 'https://cdn.bulbagarden.net/upload/b/b2/445Garchomp-Mega.png'},
+{id: 'munchlax', name: 'Munchlax', image: 'https://cdn.bulbagarden.net/upload/b/b2/446Munchlax.png'},
+{id: 'riolu', name: 'Riolu', image: 'https://cdn.bulbagarden.net/upload/a/a2/447Riolu.png'},
+{id: 'Lucario', name: 'Lucario', image: 'https://cdn.bulbagarden.net/upload/d/d7/448Lucario.png'},
+{id: 'mega lucario', name: 'Mega Lucario', image: 'https://cdn.bulbagarden.net/upload/b/b9/448Lucario-Mega.png'},
+{id: 'hippopotas', name: 'Hippopotas', image: 'https://cdn.bulbagarden.net/upload/a/ab/449Hippopotas.png'},
+{id: 'female hippo', name: 'Female Hippopotas', image: 'https://archives.bulbagarden.net/media/upload/7/7c/Spr_4d_449_f.png'},
+{id: 'Hippowdon', name: 'Hippowdon', image: 'https://cdn.bulbagarden.net/upload/5/5f/450Hippowdon.png'},
+{id: 'female hippow', name: 'Female Hippowdon', image: 'https://archives.bulbagarden.net/media/upload/4/44/Spr_4d_450_f.png'},
+{id: 'skorupi', name: 'Skorupi', image: 'https://cdn.bulbagarden.net/upload/4/47/451Skorupi.png'},
+{id: 'drapion', name: 'Drapion', image: 'https://cdn.bulbagarden.net/upload/1/13/452Drapion.png'},
+{id: 'croagunk', name: 'Croagunk', image: 'https://cdn.bulbagarden.net/upload/f/fa/453Croagunk.png'},
+{id: 'toxicroak', name: 'Toxicroak', image: 'https://cdn.bulbagarden.net/upload/8/8b/454Toxicroak.png'},
+{id: 'carnivine', name: 'Carnivine', image: 'https://cdn.bulbagarden.net/upload/d/df/455Carnivine.png'},
+{id: 'finneon', name: 'Finneon', image: 'https://cdn.bulbagarden.net/upload/4/45/456Finneon.png'},
+{id: 'lumineon', name: 'Lumineon', image: 'https://cdn.bulbagarden.net/upload/f/f0/457Lumineon.png'},
+{id: 'mantyke', name: 'Mantyke', image: 'https://cdn.bulbagarden.net/upload/b/bc/458Mantyke.png'},
+{id: 'snover', name: 'Snover', image: 'https://cdn.bulbagarden.net/upload/d/d2/459Snover.png'},
+{id: 'abomasnow', name: 'Abomasnow', image: 'https://cdn.bulbagarden.net/upload/3/3b/460Abomasnow.png'},
+{id: 'mega abomasnow', name: 'Mega Abomasnow', image: 'https://cdn.bulbagarden.net/upload/d/dc/460Abomasnow-Mega.png'},
+{id: 'weavile', name: 'Weavile', image: 'https://cdn.bulbagarden.net/upload/d/d2/461Weavile.png'},
+{id: 'magnezone', name: 'Magnezone', image: 'https://cdn.bulbagarden.net/upload/5/53/462Magnezone.png'},
+{id: 'lickilicky', name: 'Lickilicky', image: 'https://cdn.bulbagarden.net/upload/8/8e/463Lickilicky.png'},
+{id: 'rhyperior', name: 'Rhyperior', image: 'https://cdn.bulbagarden.net/upload/d/d9/464Rhyperior.png'},
+{id: 'tangrowth', name: 'Tangrowth', image: 'https://cdn.bulbagarden.net/upload/3/32/465Tangrowth.png'},
+{id: 'electivire', name: 'Electivire', image: 'https://cdn.bulbagarden.net/upload/2/23/466Electivire.png'},
+{id: 'magmortar', name: 'Magmortar', image: 'https://cdn.bulbagarden.net/upload/6/60/467Magmortar.png'},
+{id: 'togekiss', name: 'Togekiss', image: 'https://cdn.bulbagarden.net/upload/8/87/468Togekiss.png'},
+{id: 'yanmega', name: 'Yanmega', image: 'https://cdn.bulbagarden.net/upload/e/e6/469Yanmega.png'},
+{id: 'leafeon', name: 'Leafeon', image: 'https://cdn.bulbagarden.net/upload/f/f5/470Leafeon.png'},
+{id: 'glaceon', name: 'Glaceon', image: 'https://cdn.bulbagarden.net/upload/2/23/471Glaceon.png'},
+{id: 'gliscor', name: 'Gliscor', image: 'https://cdn.bulbagarden.net/upload/a/ac/472Gliscor.png'},
+{id: 'mamoswine', name: 'Mamoswine', image: 'https://cdn.bulbagarden.net/upload/d/d0/473Mamoswine.png'},
+{id: 'porygonz', name: 'Porygon-Z', image: 'https://cdn.bulbagarden.net/upload/2/24/474Porygon-Z.png'},
+{id: 'Gallade', name: 'Gallade', image: 'https://cdn.bulbagarden.net/upload/5/58/475Gallade.png'},
+{id: 'Mega Gallade', name: 'Mega Gallade', image: 'https://cdn.bulbagarden.net/upload/f/f3/475Gallade-Mega.png'},
+{id: 'probopass', name: 'Probopass', image: 'https://cdn.bulbagarden.net/upload/a/a6/476Probopass.png'},
+{id: 'dusknoir', name: 'Dusknoir', image: 'https://cdn.bulbagarden.net/upload/4/4f/477Dusknoir.png'},
+{id: 'froslass', name: 'Froslass', image: 'https://cdn.bulbagarden.net/upload/a/a2/478Froslass.png'},
+{id: 'rotom', name: 'Rotom', image: 'https://cdn.bulbagarden.net/upload/c/c5/479Rotom.png'},
+{id: 'heat rotom', name: 'Rotom Heat', image: 'https://cdn.bulbagarden.net/upload/9/99/479Rotom-Heat.png'},
+{id: 'wash rotom', name: 'Rotom Wash', image: 'https://cdn.bulbagarden.net/upload/e/ea/479Rotom-Wash.png'},
+{id: 'frost rotom', name: 'Rotom Frost', image: 'https://cdn.bulbagarden.net/upload/7/77/479Rotom-Frost.png'},
+{id: 'rotom fan', name: 'Rotom Fan', image: 'https://cdn.bulbagarden.net/upload/6/64/479Rotom-Fan.png'},
+{id: 'rotom mow', name: 'Rotom Mow', image: 'https://cdn.bulbagarden.net/upload/d/da/479Rotom-Mow.png'},
+{id: 'uxie', name: 'Uxie', image: 'https://cdn.bulbagarden.net/upload/e/ef/480Uxie.png'},
+{id: 'mesprit', name: 'Mesprit', image: 'https://cdn.bulbagarden.net/upload/4/40/481Mesprit.png'},
+{id: 'azelf', name: 'Azelf', image: 'https://cdn.bulbagarden.net/upload/d/d0/482Azelf.png'},
+{id: 'dialga', name: 'Dialga', image: 'https://cdn.bulbagarden.net/upload/8/8a/483Dialga.png'},
+{id: 'palkia', name: 'Palkia', image: 'https://cdn.bulbagarden.net/upload/6/66/484Palkia.png'},
+{id: 'heatran', name: 'Heatran', image: 'https://cdn.bulbagarden.net/upload/b/b7/485Heatran.png'},
+{id: 'regigigas', name: 'Regigigas', image: 'https://cdn.bulbagarden.net/upload/a/a1/486Regigigas.png'},
+{id: 'Giratina altered', name: 'Giratina Altered Forme', image: 'https://cdn.bulbagarden.net/upload/c/c5/487Giratina-Altered.png'},
+{id: 'giratina origin', name: 'Giratina Origin Forme', image: 'https://cdn.bulbagarden.net/upload/2/2b/487Giratina-Origin.png'},
+{id: 'cresselia', name: 'Cresselia', image: 'https://cdn.bulbagarden.net/upload/4/4a/488Cresselia.png'},
+{id: 'phione', name: 'Phione', image: 'https://cdn.bulbagarden.net/upload/7/72/489Phione.png'},
+{id: 'manaphy', name: 'Manaphy', image: 'https://cdn.bulbagarden.net/upload/2/2e/490Manaphy.png'},
+{id: 'darkrai', name: 'Darkrai', image: 'https://cdn.bulbagarden.net/upload/6/6d/491Darkrai.png'},
+{id: 'shaymin land', name: 'Shaymin Land Forme', image: 'https://cdn.bulbagarden.net/upload/0/05/492Shaymin-Land.png'},
+{id: 'shaymin sky', name: 'Shaymin Sky Forme', image: 'https://cdn.bulbagarden.net/upload/d/da/492Shaymin-Sky.png'},
+{id: 'Arceus', name: 'Arceus', image: 'https://cdn.bulbagarden.net/upload/f/fc/493Arceus.png'},
+{id: 'victini', name: 'Victini', image: 'https://cdn.bulbagarden.net/upload/6/60/494Victini.png'},
+{id: 'snivy', name: 'Snivy', image: 'https://cdn.bulbagarden.net/upload/7/75/495Snivy.png'},
+{id: 'servine', name: 'Servine', image: 'https://cdn.bulbagarden.net/upload/7/73/496Servine.png'},
+{id: 'serperior', name: 'Serperior', image: 'https://cdn.bulbagarden.net/upload/b/b7/497Serperior.png'},
+{id: 'tepig', name: 'Tepig', image: 'https://cdn.bulbagarden.net/upload/5/5b/498Tepig.png'},
+{id: 'pignite', name: 'Pignite', image: 'https://cdn.bulbagarden.net/upload/e/e8/499Pignite.png'},
+{id: 'emboar', name: 'Emboar', image: 'https://cdn.bulbagarden.net/upload/1/18/500Emboar.png'},
+{id: 'oshawott', name: 'Oshawott', image: 'https://cdn.bulbagarden.net/upload/3/3b/501Oshawott.png'},
+{id: 'dewott', name: 'Dewott', image: 'https://cdn.bulbagarden.net/upload/e/e4/502Dewott.png'},
+{id: 'samurott', name: 'Samurott', image: 'https://cdn.bulbagarden.net/upload/b/b5/503Samurott.png'},
+{id: 'patrat', name: 'Patrat', image: 'https://cdn.bulbagarden.net/upload/c/cb/504Patrat.png'},
+{id: 'watchog', name: 'Watchog', image: 'https://cdn.bulbagarden.net/upload/3/3e/505Watchog.png'},
+{id: 'lillipup', name: 'Lillipup', image: 'https://cdn.bulbagarden.net/upload/7/7e/506Lillipup.png'},
+{id: 'herdier', name: 'Herdier', image: 'https://cdn.bulbagarden.net/upload/9/96/507Herdier.png'},
+{id: 'stoutland', name: 'Stoutland', image: 'https://cdn.bulbagarden.net/upload/3/3e/508Stoutland.png'},
+{id: 'Purrloin', name: 'Purrloin', image: 'https://cdn.bulbagarden.net/upload/4/46/509Purrloin.png'},
+{id: 'liepard', name: 'Liepard', image: 'https://cdn.bulbagarden.net/upload/0/09/510Liepard.png'},
+{id: 'pansage', name: 'Pansage', image: 'https://cdn.bulbagarden.net/upload/6/6b/511Pansage.png'},
+{id: 'simisage', name: 'Simisage', image: 'https://cdn.bulbagarden.net/upload/2/24/512Simisage.png'},
+{id: 'pansear', name: 'Pansear', image: 'https://cdn.bulbagarden.net/upload/e/e1/513Pansear.png'},
+{id: 'simisear', name: 'Simisear', image: 'https://cdn.bulbagarden.net/upload/7/7c/514Simisear.png'},
+{id: 'panpour', name: 'Panpour', image: 'https://cdn.bulbagarden.net/upload/2/2f/515Panpour.png'},
+{id: 'simipour', name: 'Simipour', image: 'https://cdn.bulbagarden.net/upload/8/83/516Simipour.png'},
+{id: 'munna', name: 'Munna', image: 'https://cdn.bulbagarden.net/upload/6/61/517Munna.png'},
+{id: 'musharna', name: 'Musharna', image: 'https://cdn.bulbagarden.net/upload/2/2d/518Musharna.png'},
+{id: 'pidove', name: 'Pidove', image: 'https://cdn.bulbagarden.net/upload/c/c3/519Pidove.png'},
+{id: 'tranquill', name: 'Tranquill', image: 'https://cdn.bulbagarden.net/upload/a/a3/520Tranquill.png'},
+{id: 'unfezant', name: 'Unfezant Male', image: 'https://archives.bulbagarden.net/media/upload/7/7d/521Unfezant-Male.png'},
+{id: 'unfezant f', name: 'Unfezant Female', image: 'https://archives.bulbagarden.net/media/upload/6/66/521Unfezant-Female.png'},
+{id: 'blitzle', name: 'Blitzle', image: 'https://cdn.bulbagarden.net/upload/a/af/522Blitzle.png'},
+{id: 'zebstrika', name: 'Zebstrika', image: 'https://cdn.bulbagarden.net/upload/a/a1/523Zebstrika.png'},
+{id: 'roggenrola', name: 'Roggenrola', image: 'https://cdn.bulbagarden.net/upload/6/69/524Roggenrola.png'},
+{id: 'boldore', name: 'Boldore', image: 'https://cdn.bulbagarden.net/upload/c/ce/525Boldore.png'},
+{id: 'gigalith', name: 'Gigalith', image: 'https://cdn.bulbagarden.net/upload/5/59/526Gigalith.png'},
+{id: 'woobat', name: 'Woobat', image: 'https://cdn.bulbagarden.net/upload/3/36/527Woobat.png'},
+{id: 'swoobat', name: 'Swoobat', image: 'https://cdn.bulbagarden.net/upload/9/9d/528Swoobat.png'},
+{id: 'drilbur', name: 'Drilbur', image: 'https://cdn.bulbagarden.net/upload/c/cf/529Drilbur.png'},
+{id: 'excadrill', name: 'Excadrill', image: 'https://cdn.bulbagarden.net/upload/6/63/530Excadrill.png'},
+{id: 'audino', name: 'Audino', image: 'https://cdn.bulbagarden.net/upload/f/f5/531Audino.png'},
+{id: 'mega audino', name: 'Mega Audino', image: 'https://cdn.bulbagarden.net/upload/1/17/531Audino-Mega.png'},
+{id: 'timburr', name: 'Timburr', image: 'https://cdn.bulbagarden.net/upload/6/69/532Timburr.png'},
+{id: 'gurdurr', name: 'Gurdurr', image: 'https://cdn.bulbagarden.net/upload/a/ad/533Gurdurr.png'},
+{id: 'conkeldurr', name: 'Conkeldurr', image: 'https://cdn.bulbagarden.net/upload/1/11/534Conkeldurr.png'},
+{id: 'tympole', name: 'Tympole', image: 'https://cdn.bulbagarden.net/upload/c/c9/535Tympole.png'},
+{id: 'palpitoad', name: 'Palpitoad', image: 'https://cdn.bulbagarden.net/upload/c/c9/536Palpitoad.png'},
+{id: 'seismitoad', name: 'Seismitoad', image: 'https://cdn.bulbagarden.net/upload/3/35/537Seismitoad.png'},
+{id: 'throh', name: 'Throh', image: 'https://cdn.bulbagarden.net/upload/7/74/538Throh.png'},
+{id: 'sawk', name: 'Sawk', image: 'https://cdn.bulbagarden.net/upload/a/a8/539Sawk.png'},
+{id: 'sewaddle', name: 'Sewaddle', image: 'https://cdn.bulbagarden.net/upload/4/4a/540Sewaddle.png'},
+{id: 'swadloon', name: 'Swadloon', image: 'https://cdn.bulbagarden.net/upload/2/2b/541Swadloon.png'},
+{id: 'leavanny', name: 'Leavanny', image: 'https://cdn.bulbagarden.net/upload/8/8e/542Leavanny.png'},
+{id: 'venipede', name: 'Venipede', image: 'https://cdn.bulbagarden.net/upload/0/0e/543Venipede.png'},
+{id: 'whirlipede', name: 'Whirlipede', image: 'https://cdn.bulbagarden.net/upload/b/bc/544Whirlipede.png'},
+{id: 'scolipede', name: 'Scolipede', image: 'https://cdn.bulbagarden.net/upload/c/cb/545Scolipede.png'},
+{id: 'cottonee', name: 'Cottonee', image: 'https://cdn.bulbagarden.net/upload/4/44/546Cottonee.png'},
+{id: 'whimsicott', name: 'Whimsicott', image: 'https://cdn.bulbagarden.net/upload/a/a2/547Whimsicott.png'},
+{id: 'petilil', name: 'Petilil', image: 'https://cdn.bulbagarden.net/upload/0/0b/548Petilil.png'},
+{id: 'lilligant', name: 'Lilligant', image: 'https://cdn.bulbagarden.net/upload/2/21/549Lilligant.png'},
+{id: 'Basculin red', name: 'Basculin Red Stripe', image: 'https://archives.bulbagarden.net/media/upload/2/24/550Basculin-Red.png'},
+{id: 'basculin blue', name: 'Basculin Blue Stripe', image: 'https://archives.bulbagarden.net/media/upload/f/fa/550Basculin-Blue.png'},
+{id: 'sandile', name: 'Sandile', image: 'https://cdn.bulbagarden.net/upload/2/26/551Sandile.png'},
+{id: 'krokorok', name: 'Krokorok', image: 'https://cdn.bulbagarden.net/upload/d/d4/552Krokorok.png'},
+{id: 'krookodile', name: 'Krookodile', image: 'https://cdn.bulbagarden.net/upload/e/e5/553Krookodile.png'},
+{id: 'darumaka', name: 'Darumaka', image: 'https://cdn.bulbagarden.net/upload/4/4c/554Darumaka.png'},
+{id: 'galarian darumaka', name: 'Galarian Darumaka', image: 'https://cdn.bulbagarden.net/upload/c/c9/554Darumaka-Galar.png'},
+{id: 'darmanitan', name: 'Darmanitan', image: 'https://cdn.bulbagarden.net/upload/4/40/555Darmanitan.png'},
+{id: 'galarian darmanitan', name: 'Galarian Darmanitan', image: 'https://cdn.bulbagarden.net/upload/6/60/555Darmanitan-Galar.png'},
+{id: 'zen mode darmanitan', name: 'Zen Mode Darmanitan', image: 'https://cdn.bulbagarden.net/upload/f/fe/555Darmanitan-Zen.png'},
+{id: 'galarian zen mode darmanitan', name: 'Galarian Zen Mode Darmanitan', image: 'https://archive-media-1.nyafuu.org/vp/image/1573/53/1573539817448.png'},
+{id: 'maractus', name: 'Maractus', image: 'https://cdn.bulbagarden.net/upload/3/35/556Maractus.png'},
+{id: 'dwebble', name: 'Dwebble', image: 'https://cdn.bulbagarden.net/upload/6/6b/557Dwebble.png'},
+{id: 'crustle', name: 'Crustle', image: 'https://cdn.bulbagarden.net/upload/1/19/558Crustle.png'},
+{id: 'scraggy', name: 'Scraggy', image: 'https://cdn.bulbagarden.net/upload/d/dc/559Scraggy.png'},
+{id: 'scrafty', name: 'Scrafty', image: 'https://cdn.bulbagarden.net/upload/e/e8/560Scrafty.png'},
+{id: 'sigilyph', name: 'Sigilyph', image: 'https://cdn.bulbagarden.net/upload/6/67/561Sigilyph.png'},
+{id: 'yamask', name: 'Yamask', image: 'https://cdn.bulbagarden.net/upload/a/a4/562Yamask.png'},
+{id: 'cofagrigus', name: 'Cofagrigus', image: 'https://cdn.bulbagarden.net/upload/f/f8/563Cofagrigus.png'},
+{id: 'tirtouga', name: 'Tirtouga', image: 'https://cdn.bulbagarden.net/upload/1/1a/564Tirtouga.png'},
+{id: 'carracosta', name: 'Carracosta', image: 'https://cdn.bulbagarden.net/upload/d/d0/565Carracosta.png'},
+{id: 'archen', name: 'Archen', image: 'https://cdn.bulbagarden.net/upload/a/a3/566Archen.png'},
+{id: 'archeops', name: 'Archeops', image: 'https://cdn.bulbagarden.net/upload/1/14/567Archeops.png'},
+{id: 'trubbish', name: 'Trubbish', image: 'https://cdn.bulbagarden.net/upload/e/e2/568Trubbish.png'},
+{id: 'garbodor', name: 'Garbodor', image: 'https://cdn.bulbagarden.net/upload/c/c4/569Garbodor.png'},
+{id: 'gmax garbodor', name: 'Gigantamax Garbodor', image: 'https://cdn.bulbagarden.net/upload/c/c9/569Garbodor-Gigantamax.png'},
+{id: 'zorua', name: 'Zorua', image: 'https://cdn.bulbagarden.net/upload/2/2b/570Zorua.png'},
+{id: 'zoroark', name: 'Zoroark', image: 'https://cdn.bulbagarden.net/upload/a/a6/571Zoroark.png'},
+{id: 'minccino', name: 'Minccino', image: 'https://cdn.bulbagarden.net/upload/e/ec/572Minccino.png'},
+{id: 'cinccino', name: 'Cinccino', image: 'https://cdn.bulbagarden.net/upload/9/94/573Cinccino.png'},
+{id: 'gothita', name: 'Gothita', image: 'https://cdn.bulbagarden.net/upload/7/71/574Gothita.png'},
+{id: 'gothorita', name: 'Gothorita', image: 'https://cdn.bulbagarden.net/upload/6/67/575Gothorita.png'},
+{id: 'gothitelle', name: 'Gothitelle', image: 'https://cdn.bulbagarden.net/upload/3/38/576Gothitelle.png'},
+{id: 'solosis', name: 'Solosis', image: 'https://cdn.bulbagarden.net/upload/1/1e/577Solosis.png'},
+{id: 'duosion', name: 'Duosion', image: 'https://cdn.bulbagarden.net/upload/8/83/578Duosion.png'},
+{id: 'reuniclus', name: 'Reuniclus', image: 'https://cdn.bulbagarden.net/upload/1/19/579Reuniclus.png'},
+{id: 'ducklett', name: 'Ducklett', image: 'https://cdn.bulbagarden.net/upload/4/4b/580Ducklett.png'},
+{id: 'swanna', name: 'Swanna', image: 'https://cdn.bulbagarden.net/upload/7/76/581Swanna.png'},
+{id: 'vanillite', name: 'Vanillite', image: 'https://cdn.bulbagarden.net/upload/3/3f/582Vanillite.png'},
+{id: 'vanillish', name: 'Vanillish', image: 'https://cdn.bulbagarden.net/upload/2/2f/583Vanillish.png'},
+{id: 'vanilluxe', name: 'Vanilluxe', image: 'https://cdn.bulbagarden.net/upload/3/39/584Vanilluxe.png'},
+{id: 'deerling spring', name: 'Deerling Spring Form', image: 'https://cdn.bulbagarden.net/upload/6/68/585Deerling-Spring.png'},
+{id: 'deerling summer', name: 'Deerling Summer Form', image: 'https://cdn.bulbagarden.net/upload/d/d7/585Deerling-Summer.png'},
+{id: 'deerling autumn', name: 'Deerling Autumn Form', image: 'https://cdn.bulbagarden.net/upload/e/e3/585Deerling-Autumn.png'},
+{id: 'deerling winter', name: 'Deerling Winter Form', image: 'https://cdn.bulbagarden.net/upload/d/d4/585Deerling-Winter.png'},
+{id: 'sawsbuck spring', name: 'Sawsbuck Spring Form', image: 'https://cdn.bulbagarden.net/upload/8/8d/586Sawsbuck-Spring.png'},
+{id: 'sawsbuck summer', name: 'Sawsbuck Summer Form', image: 'https://cdn.bulbagarden.net/upload/4/44/586Sawsbuck-Summer.png'},
+{id: 'sawsbuck autumn', name: 'Sawsbuck Autumn Form', image: 'https://cdn.bulbagarden.net/upload/c/ca/586Sawsbuck-Autumn.png'},
+{id: 'sawsbuck winter', name: 'Sawsbuck Winter Form', image: 'https://cdn.bulbagarden.net/upload/c/c5/586Sawsbuck-Winter.png'},
+{id: 'emolga', name: 'Emolga', image: 'https://cdn.bulbagarden.net/upload/b/b4/587Emolga.png'},
+{id: 'karrablast', name: 'Karrablast', image: 'https://cdn.bulbagarden.net/upload/6/60/588Karrablast.png'},
+{id: 'escavalier', name: 'Escavalier', image: 'https://cdn.bulbagarden.net/upload/6/63/589Escavalier.png'},
+{id: 'foongus', name: 'Foongus', image: 'https://cdn.bulbagarden.net/upload/c/cc/590Foongus.png'},
+{id: 'amoonguss', name: 'Amoonguss', image: 'https://cdn.bulbagarden.net/upload/1/13/591Amoonguss.png'},
+{id: 'frillish m', name: 'Frillish Male', image: 'https://archives.bulbagarden.net/media/upload/2/20/592Frillish-Male.png'},
+{id: 'frillish f', name: 'Frillish Female', image: 'https://archives.bulbagarden.net/media/upload/f/f6/592Frillish-Female.png'},
+{id: 'Jellicent m', name: 'Jellicent Male', image: 'https://archives.bulbagarden.net/media/upload/9/96/593Jellicent-Male.png'},
+{id: 'jellicent f', name: 'Jellicent Female', image: 'https://archives.bulbagarden.net/media/upload/f/f8/593Jellicent-Female.png'},
+{id: 'alomomola', name: 'Alomomola', image: 'https://cdn.bulbagarden.net/upload/1/10/594Alomomola.png'},
+{id: 'joltik', name: 'Joltik', image: 'https://cdn.bulbagarden.net/upload/f/f8/595Joltik.png'},
+{id: 'galvantula', name: 'Galvantula', image: 'https://cdn.bulbagarden.net/upload/7/7a/596Galvantula.png'},
+{id: 'ferroseed', name: 'Ferroseed', image: 'https://cdn.bulbagarden.net/upload/2/28/597Ferroseed.png'},
+{id: 'ferrothorn', name: 'Ferrothorn', image: 'https://cdn.bulbagarden.net/upload/6/6c/598Ferrothorn.png'},
+{id: 'klink', name: 'Klink', image: 'https://cdn.bulbagarden.net/upload/e/ea/599Klink.png'},
+{id: 'klang', name: 'Klang', image: 'https://cdn.bulbagarden.net/upload/8/80/600Klang.png'},
+{id: 'klinklang', name: 'Klinklang', image: 'https://cdn.bulbagarden.net/upload/c/cf/601Klinklang.png'},
+{id: 'tynamo', name: 'Tynamo', image: 'https://cdn.bulbagarden.net/upload/5/5e/602Tynamo.png'},
+{id: 'elektrik', name: 'Eelektrik', image: 'https://cdn.bulbagarden.net/upload/c/c7/603Eelektrik.png'},
+{id: 'eelektross', name: 'Eelektross', image: 'https://cdn.bulbagarden.net/upload/6/6c/604Eelektross.png'},
+{id: 'elgyem', name: 'Elgyem', image: 'https://cdn.bulbagarden.net/upload/f/fd/605Elgyem.png'},
+{id: 'beheeyem', name: 'Beheeyem', image: 'https://cdn.bulbagarden.net/upload/2/2c/606Beheeyem.png'},
+{id: 'litwick', name: 'Litwick', image: 'https://cdn.bulbagarden.net/upload/8/8e/607Litwick.png'},
+{id: 'lampent', name: 'Lampent', image: 'https://cdn.bulbagarden.net/upload/a/a5/608Lampent.png'},
+{id: 'chandelure', name: 'Chandelure', image: 'https://cdn.bulbagarden.net/upload/6/65/609Chandelure.png'},
+{id: 'axew', name: 'Axew', image: 'https://cdn.bulbagarden.net/upload/5/5c/610Axew.png'},
+{id: 'fraxure', name: 'Fraxure', image: 'https://cdn.bulbagarden.net/upload/0/05/611Fraxure.png'},
+{id: 'haxorus', name: 'Haxorus', image: 'https://cdn.bulbagarden.net/upload/8/8f/612Haxorus.png'},
+{id: 'cubchoo', name: 'Cubchoo', image: 'https://cdn.bulbagarden.net/upload/7/72/613Cubchoo.png'},
+{id: 'beartic', name: 'Beartic', image: 'https://cdn.bulbagarden.net/upload/4/40/614Beartic.png'},
+{id: 'cryogonal', name: 'Cryogonal', image: 'https://cdn.bulbagarden.net/upload/1/11/615Cryogonal.png'},
+{id: 'shelmet', name: 'Shelmet', image: 'https://cdn.bulbagarden.net/upload/f/f6/616Shelmet.png'},
+{id: 'accelgor', name: 'Accelgor', image: 'https://cdn.bulbagarden.net/upload/3/34/617Accelgor.png'},
+{id: 'stunfisk', name: 'Stunfisk', image: 'https://cdn.bulbagarden.net/upload/d/d2/618Stunfisk.png'},
+{id: 'galarian stunfisk', name: 'Galarian Stunfisk', image: 'https://cdn.bulbagarden.net/upload/1/11/618Stunfisk-Galar.png'},
+{id: 'mienfoo', name: 'Mienfoo', image: 'https://cdn.bulbagarden.net/upload/4/41/619Mienfoo.png'},
+{id: 'Mienshao', name: 'Mienshao', image: 'https://cdn.bulbagarden.net/upload/2/20/620Mienshao.png'},
+{id: 'druddigon', name: 'Druddigon', image: 'https://cdn.bulbagarden.net/upload/a/ad/621Druddigon.png'},
+{id: 'golett', name: 'Golett', image: 'https://cdn.bulbagarden.net/upload/a/ac/622Golett.png'},
+{id: 'golurk', name: 'Golurk', image: 'https://cdn.bulbagarden.net/upload/6/68/623Golurk.png'},
+{id: 'pawniard', name: 'Pawniard', image: 'https://cdn.bulbagarden.net/upload/9/9c/624Pawniard.png'},
+{id: 'bisharp', name: 'Bisharp', image: 'https://cdn.bulbagarden.net/upload/7/74/625Bisharp.png'},
+{id: 'bouffalant', name: 'Bouffalant', image: 'https://cdn.bulbagarden.net/upload/a/a4/626Bouffalant.png'},
+{id: 'rufflet', name: 'Rufflet', image: 'https://cdn.bulbagarden.net/upload/b/bb/627Rufflet.png'},
+{id: 'braviary', name: 'Braviary', image: 'https://cdn.bulbagarden.net/upload/c/cf/628Braviary.png'},
+{id: 'vullaby', name: 'Vullaby', image: 'https://cdn.bulbagarden.net/upload/f/f2/629Vullaby.png'},
+{id: 'mandibuzz', name: 'Mandibuzz', image: 'https://cdn.bulbagarden.net/upload/0/00/630Mandibuzz.png'},
+{id: 'heatmor', name: 'Heatmor', image: 'https://cdn.bulbagarden.net/upload/b/b0/631Heatmor.png'},
+{id: 'durant', name: 'Durant', image: 'https://cdn.bulbagarden.net/upload/1/1a/632Durant.png'},
+{id: 'dieno', name: 'Deino', image: 'https://cdn.bulbagarden.net/upload/f/f7/633Deino.png'},
+{id: 'zweilous', name: 'Zweilous', image: 'https://cdn.bulbagarden.net/upload/a/a6/634Zweilous.png'},
+{id: 'hydreigon', name: 'Hydreigon', image: 'https://cdn.bulbagarden.net/upload/3/3e/635Hydreigon.png'},
+{id: 'larvesta', name: 'Larvesta', image: 'https://cdn.bulbagarden.net/upload/f/f4/636Larvesta.png'},
+{id: 'volcarona', name: 'Volcarona', image: 'https://cdn.bulbagarden.net/upload/6/6b/637Volcarona.png'},
+{id: 'cobalion', name: 'Cobalion', image: 'https://cdn.bulbagarden.net/upload/6/65/638Cobalion.png'},
+{id: 'terrakion', name: 'Terrakion', image: 'https://cdn.bulbagarden.net/upload/a/ad/639Terrakion.png'},
+{id: 'virizion', name: 'Virizion', image: 'https://cdn.bulbagarden.net/upload/7/79/640Virizion.png'},
+{id: 'tornadus', name: 'Tornadus Incarnate Forme', image: 'https://cdn.bulbagarden.net/upload/0/08/641Tornadus.png'},
+{id: 'tornadus therian', name: 'Tornadus Therian Forme', image: 'https://cdn.bulbagarden.net/upload/7/7e/641Tornadus-Therian.png'},
+{id: 'thundurus', name: 'Thundurus Incarnate Forme', image: 'https://cdn.bulbagarden.net/upload/b/b8/642Thundurus.png'},
+{id: 'thundurus therian', name: 'Thundurus Therian Forme', image: 'https://cdn.bulbagarden.net/upload/8/86/642Thundurus-Therian.png'},
+{id: 'reshiram', name: 'Reshiram', image: 'https://cdn.bulbagarden.net/upload/8/8d/643Reshiram.png'},
+{id: 'zekrom', name: 'Zekrom', image: 'https://cdn.bulbagarden.net/upload/8/81/644Zekrom.png'},
+{id: 'landorus', name: 'Landorus Incarnate Forme', image: 'https://cdn.bulbagarden.net/upload/b/bb/645Landorus.png'},
+{id: 'landorus therian', name: 'Landorus Therian Forme', image: 'https://cdn.bulbagarden.net/upload/0/00/645Landorus-Therian.png'},
+{id: 'kyurem', name: 'Kyurem', image: 'https://cdn.bulbagarden.net/upload/c/c3/646Kyurem.png'},
+{id: 'white kyurem', name: 'White Kyurem', image: 'https://cdn.bulbagarden.net/upload/8/81/646Kyurem-White.png'},
+{id: 'black kyurem', name: 'Black Kyurem', image: 'https://cdn.bulbagarden.net/upload/1/16/646Kyurem-Black.png'},
+{id: 'keldeo', name: 'Keldeo Ordinary Form', image: 'https://cdn.bulbagarden.net/upload/5/50/647Keldeo.png'},
+{id: 'keldeo resolute', name: 'Keldeo Resolute Form', image: 'https://cdn.bulbagarden.net/upload/7/7c/647Keldeo-Resolute.png'},
+{id: 'meloetta', name: 'Meloetta Aria Forme', image: 'https://cdn.bulbagarden.net/upload/a/a3/648Meloetta.png'},
+{id: 'meloetta pirouette', name: 'Meloetta Pirouette Forme', image: 'https://cdn.bulbagarden.net/upload/3/36/648Meloetta-Pirouette.png'},
+{id: 'genesect', name: 'Genesect', image: 'https://cdn.bulbagarden.net/upload/4/46/649Genesect.png'},
+{id: 'chespin', name: 'Chespin', image: 'https://cdn.bulbagarden.net/upload/c/ca/650Chespin.png'},
+{id: 'quilladin', name: 'Quilladin', image: 'https://cdn.bulbagarden.net/upload/7/71/651Quilladin.png'},
+{id: 'chesnaught', name: 'Chesnaught', image: 'https://cdn.bulbagarden.net/upload/1/18/652Chesnaught.png'},
+{id: 'fennekin', name: 'Fennekin', image: 'https://cdn.bulbagarden.net/upload/3/3d/653Fennekin.png'},
+{id: 'braixen', name: 'Braixen', image: 'https://cdn.bulbagarden.net/upload/0/09/654Braixen.png'},
+{id: 'delphox', name: 'Delphox', image: 'https://cdn.bulbagarden.net/upload/2/21/655Delphox.png'},
+{id: 'froakie', name: 'Froakie', image: 'https://cdn.bulbagarden.net/upload/1/18/656Froakie.png'},
+{id: 'frogadier', name: 'Frogadier', image: 'https://cdn.bulbagarden.net/upload/f/fc/657Frogadier.png'},
+{id: 'greninja', name: 'Greninja', image: 'https://cdn.bulbagarden.net/upload/6/67/658Greninja.png'},
+{id: 'greninja ash', name: 'Ash-Greninja', image: 'https://cdn.bulbagarden.net/upload/0/0e/658Greninja-Ash.png'},
+{id: 'bunnelby', name: 'Bunnelby', image: 'https://cdn.bulbagarden.net/upload/7/70/659Bunnelby.png'},
+{id: 'diggersby', name: 'Diggersby', image: 'https://cdn.bulbagarden.net/upload/3/34/660Diggersby.png'},
+{id: 'fletchling', name: 'Fletchling', image: 'https://cdn.bulbagarden.net/upload/7/7e/661Fletchling.png'},
+{id: 'fletchinder', name: 'Fletchinder', image: 'https://cdn.bulbagarden.net/upload/c/ce/662Fletchinder.png'},
+{id: 'talonflame', name: 'Talonflame', image: 'https://cdn.bulbagarden.net/upload/a/ae/663Talonflame.png'},
+{id: 'scatterbug', name: 'Scatterbug', image: 'https://cdn.bulbagarden.net/upload/d/d3/664Scatterbug.png'},
+{id: 'spewpa', name: 'Spewpa', image: 'https://cdn.bulbagarden.net/upload/b/b7/665Spewpa.png'},
+{id: 'vivillon', name: 'Vivillon Meadow Pattern', image: 'https://cdn.bulbagarden.net/upload/4/4c/666Vivillon.png'},
+{id: 'vivillon a', name: 'Vivillon Archipelago Pattern', image: 'https://cdn.bulbagarden.net/upload/7/76/666Vivillon-Archipelago.png'},
+{id: 'vivillon c', name: 'Vivillon Continental Pattern', image: 'https://cdn.bulbagarden.net/upload/3/3b/666Vivillon-Continental.png'},
+{id: 'vivillon elegant', name: 'Vivillon Elegant Pattern', image: 'https://cdn.bulbagarden.net/upload/0/0a/666Vivillon-Elegant.png'},
+{id: 'vivillon fancy', name: 'Vivillon Fancy Pattern', image: 'https://cdn.bulbagarden.net/upload/8/88/666Vivillon-Fancy.png'},
+{id: 'vivillon garden', name: 'Vivillon Garden Pattern', image: 'https://cdn.bulbagarden.net/upload/6/64/666Vivillon-Garden.png'},
+{id: 'vivillon high', name: 'Vivillon High Plains Pattern', image: 'https://cdn.bulbagarden.net/upload/b/b6/666Vivillon-High_Plains.png'},
+{id: 'vivillon icy', name: 'Vivillon Icy Snow Pattern', image: 'https://cdn.bulbagarden.net/upload/6/6c/666Vivillon-Icy_Snow.png'},
+{id: 'vivillon jungle', name: 'Vivillon Jungle Pattern', image: 'https://cdn.bulbagarden.net/upload/1/19/666Vivillon-Jungle.png'},
+{id: 'vivillon marine', name: 'Vivillon Marine Pattern', image: 'https://cdn.bulbagarden.net/upload/4/4d/666Vivillon-Marine.png'},
+{id: 'vivillon modern', name: 'Vivillon Modern Pattern', image: 'https://cdn.bulbagarden.net/upload/d/d8/666Vivillon-Modern.png'},
+{id: 'vivillon monsoon', name: 'Vivillon Monsoon Pattern', image: 'https://cdn.bulbagarden.net/upload/2/29/666Vivillon-Monsoon.png'},
+{id: 'vivillon ocean', name: 'Vivillon Ocean Pattern', image: 'https://cdn.bulbagarden.net/upload/6/6c/666Vivillon-Ocean.png'},
+{id: 'vivillon pokeball', name: 'Vivillon Pokeball Pattern', image: 'https://cdn.bulbagarden.net/upload/c/c6/666Vivillon-Pok%C3%A9_Ball.png'},
+{id: 'vivillon polar', name: 'Vivillon Polar Pattern', image: 'https://cdn.bulbagarden.net/upload/a/a6/666Vivillon-Polar.png'},
+{id: 'vivillon river', name: 'Vivillon River Pattern', image: 'https://cdn.bulbagarden.net/upload/c/ce/666Vivillon-River.png'},
+{id: 'vivillon sand', name: 'Vivillon Sandstorm Pattern', image: 'https://cdn.bulbagarden.net/upload/d/d9/666Vivillon-Sandstorm.png'},
+{id: 'vivillon savanna', name: 'Vivillon Savanna Pattern', image: 'https://cdn.bulbagarden.net/upload/d/d4/666Vivillon-Savanna.png'},
+{id: 'vivillon sun', name: 'Vivillon Sun Pattern', image: 'https://cdn.bulbagarden.net/upload/d/d8/666Vivillon-Sun.png'},
+{id: 'vivillon tundra', name: 'Vivillon Tundra Pattern', image: 'https://cdn.bulbagarden.net/upload/9/9a/666Vivillon-Tundra.png'},
+{id: 'litleo', name: 'Litleo', image: 'https://cdn.bulbagarden.net/upload/1/1f/667Litleo.png'},
+{id: 'Pyroar m', name: 'Pyroar Male', image: 'https://archives.bulbagarden.net/media/upload/b/be/668Pyroar-Male.png'},
+{id: 'pyroar f', name: 'Pyroar Female', image: 'https://archives.bulbagarden.net/media/upload/f/f9/668Pyroar-Female.png'},
+{id: 'flabebe', name: 'Flabebe Red Flower', image: 'https://cdn.bulbagarden.net/upload/5/52/669Flab%C3%A9b%C3%A9.png'},
+{id: 'flabebey', name: 'Flabebe Yellow Flower', image: 'https://cdn.bulbagarden.net/upload/0/0c/669Flab%C3%A9b%C3%A9_Yellow_Flower_Dream.png'},
+{id: 'flabebeo', name: 'Flabebe Orange Flower', image: 'https://cdn.bulbagarden.net/upload/b/b9/669Flab%C3%A9b%C3%A9_Orange_Flower_Dream.png'},
+{id: 'flabebeb', name: 'Flabebe Blue Flower', image: 'https://cdn.bulbagarden.net/upload/3/39/669Flab%C3%A9b%C3%A9_Blue_Flower_Dream.png'},
+{id: 'flabebew', name: 'Flabebe White Flower', image: 'https://cdn.bulbagarden.net/upload/7/78/669Flab%C3%A9b%C3%A9_White_Flower_Dream.png'},
+{id: 'floetter', name: 'Floette Red Flower', image: 'https://cdn.bulbagarden.net/upload/1/17/670Floette.png'},
+{id: 'floettey', name: 'Floette Yellow Flower', image: 'https://cdn.bulbagarden.net/upload/1/1f/670Floette_Yellow_Flower_Dream.png'},
+{id: 'floetteo', name: 'Floette Orange Flower', image: 'https://cdn.bulbagarden.net/upload/0/06/670Floette_Orange_Flower_Dream.png'},
+{id: 'floetteb', name: 'Floette Blue Flower', image: 'https://cdn.bulbagarden.net/upload/7/70/670Floette_Blue_Flower_Dream.png'},
+{id: 'floettew', name: 'Floette White Flower', image: 'https://cdn.bulbagarden.net/upload/a/a0/670Floette_White_Flower_Dream.png'},
+{id: 'florgesr', name: 'Florges Red Flower', image: 'https://cdn.bulbagarden.net/upload/3/37/671Florges.png'},
+{id: 'florgesy', name: 'Florges Yellow Flower', image: 'https://cdn.bulbagarden.net/upload/5/5d/671Florges_Yellow_Flower_Dream.png'},
+{id: 'florgeso', name: 'Florges Orange Flower', image: 'https://cdn.bulbagarden.net/upload/6/6f/671Florges_Orange_Flower_Dream.png'},
+{id: 'florgesb', name: 'Florges Blue Flower', image: 'https://cdn.bulbagarden.net/upload/b/bc/671Florges_Blue_Flower_Dream.png'},
+{id: 'florgesw', name: 'Florges White Flower', image: 'https://cdn.bulbagarden.net/upload/e/ea/671Florges_White_Flower_Dream.png'},
+{id: 'skiddo', name: 'Skiddo', image: 'https://cdn.bulbagarden.net/upload/5/5d/672Skiddo.png'},
+{id: 'gogoat', name: 'Gogoat', image: 'https://cdn.bulbagarden.net/upload/b/bc/673Gogoat.png'},
+{id: 'pancham', name: 'Pancham', image: 'https://cdn.bulbagarden.net/upload/1/1c/674Pancham.png'},
+{id: 'pangoro', name: 'Pangoro', image: 'https://cdn.bulbagarden.net/upload/0/08/675Pangoro.png'},
+{id: 'furfrou natural', name: 'Furfrou Natural Form', image: 'https://cdn.bulbagarden.net/upload/4/49/676Furfrou.png'},
+{id: 'furfrou heart', name: 'Furfrou Heart Trim', image: 'https://archives.bulbagarden.net/media/upload/5/5c/676Furfrou-Heart.png'},
+{id: 'furfrou diamond', name: 'Furfrou Diamond Trim', image: 'https://archives.bulbagarden.net/media/upload/6/6c/676Furfrou-Diamond.png'},
+{id: 'furfrou star', name: 'Furfrou Star Trim', image: 'https://archives.bulbagarden.net/media/upload/e/e8/676Furfrou-Star.png'},
+{id: 'furfrou debutante', name: 'Furfrou Debutante Trim', image: 'https://archives.bulbagarden.net/media/upload/e/e3/676Furfrou_Debutante_Dream.png'},
+{id: 'furfrou matron', name: 'Furfrou Matron Trim', image: 'https://archives.bulbagarden.net/media/upload/e/e7/676Furfrou_Matron_Dream.png'},
+{id: 'furfrou dandy', name: 'Furfrou Dandy Trim', image: 'https://archives.bulbagarden.net/media/upload/4/48/676Furfrou_Dandy_Dream.png'},
+{id: 'furfrou la reine', name: 'Furfrou La Reine Trim', image: 'https://archives.bulbagarden.net/media/upload/a/ac/676Furfrou_La_Reine_Dream.png'},
+{id: 'furfrou kabuki', name: 'Furfrou Kabuki Trim', image: 'https://archives.bulbagarden.net/media/upload/5/54/676Furfrou_Kabuki_Dream.png'},
+{id: 'furfrou pharoah', name: 'Furfrou Pharaoh Trim', image: 'https://archives.bulbagarden.net/media/upload/6/68/676Furfrou_Pharaoh_Dream.png'},
+{id: 'espurr', name: 'Espurr', image: 'https://cdn.bulbagarden.net/upload/0/09/677Espurr.png'},
+{id: 'meowstic m', name: 'Meowstic Male', image: 'https://archives.bulbagarden.net/media/upload/5/58/678Meowstic-Male.png'},
+{id: 'meowstic f', name: 'Meowstic Female', image: 'https://archives.bulbagarden.net/media/upload/b/bb/678Meowstic-Female.png'},
+{id: 'honedge', name: 'Honedge', image: 'https://cdn.bulbagarden.net/upload/3/35/679Honedge.png'},
+{id: 'doublade', name: 'Doublade', image: 'https://cdn.bulbagarden.net/upload/e/ef/680Doublade.png'},
+{id: 'aegislash', name: 'Aegislash Shield Forme', image: 'https://archives.bulbagarden.net/media/upload/e/ec/681Aegislash-Shield.png'},
+{id: 'aegislash sword', name: 'Aegislash Sword Forme', image: 'https://archives.bulbagarden.net/media/upload/f/f9/681Aegislash-Blade.png'},
+{id: 'spritzee', name: 'Spritzee', image: 'https://cdn.bulbagarden.net/upload/6/66/682Spritzee.png'},
+{id: 'aromatisse', name: 'Aromatisse', image: 'https://cdn.bulbagarden.net/upload/d/d9/683Aromatisse.png'},
+{id: 'swirlix', name: 'Swirlix', image: 'https://cdn.bulbagarden.net/upload/b/bf/684Swirlix.png'},
+{id: 'slurpuff', name: 'Slurpuff', image: 'https://cdn.bulbagarden.net/upload/8/8d/685Slurpuff.png'},
+{id: 'inkay', name: 'Inkay', image: 'https://cdn.bulbagarden.net/upload/7/70/686Inkay.png'},
+{id: 'malamar', name: 'Malamar', image: 'https://cdn.bulbagarden.net/upload/e/e4/687Malamar.png'},
+{id: 'binacle', name: 'Binacle', image: 'https://cdn.bulbagarden.net/upload/5/5b/688Binacle.png'},
+{id: 'barbaracle', name: 'Barbaracle', image: 'https://cdn.bulbagarden.net/upload/4/48/689Barbaracle.png'},
+{id: 'skrelp', name: 'Skrelp', image: 'https://cdn.bulbagarden.net/upload/4/4e/690Skrelp.png'},
+{id: 'dragalge', name: 'Dragalge', image: 'https://cdn.bulbagarden.net/upload/a/a9/691Dragalge.png'},
+{id: 'clauncher', name: 'Clauncher', image: 'https://cdn.bulbagarden.net/upload/f/fb/692Clauncher.png'},
+{id: 'clawitzer', name: 'Clawitzer', image: 'https://cdn.bulbagarden.net/upload/d/d3/693Clawitzer.png'},
+{id: 'helioptile', name: 'Helioptile', image: 'https://cdn.bulbagarden.net/upload/5/51/694Helioptile.png'},
+{id: 'heliolisk', name: 'Heliolisk', image: 'https://cdn.bulbagarden.net/upload/f/f6/695Heliolisk.png'},
+{id: 'tyrunt', name: 'Tyrunt', image: 'https://cdn.bulbagarden.net/upload/c/c3/696Tyrunt.png'},
+{id: 'tyrantrum', name: 'Tyrantrum', image: 'https://cdn.bulbagarden.net/upload/8/8b/697Tyrantrum.png'},
+{id: 'amaura', name: 'Amaura', image: 'https://cdn.bulbagarden.net/upload/2/2a/698Amaura.png'},
+{id: 'aurorus', name: 'Aurorus', image: 'https://cdn.bulbagarden.net/upload/9/9e/699Aurorus.png'},
+{id: 'sylveon', name: 'Sylveon', image: 'https://cdn.bulbagarden.net/upload/e/e8/700Sylveon.png'},
+{id: 'hawlucha', name: 'Hawlucha', image: 'https://cdn.bulbagarden.net/upload/4/44/701Hawlucha.png'},
+{id: 'dedenne', name: 'Dedenne', image: 'https://cdn.bulbagarden.net/upload/c/c9/702Dedenne.png'},
+{id: 'carbink', name: 'Carbink', image: 'https://cdn.bulbagarden.net/upload/f/fa/703Carbink.png'},
+{id: 'goomy', name: 'Goomy', image: 'https://cdn.bulbagarden.net/upload/2/28/704Goomy.png'},
+{id: 'sliggoo', name: 'Sliggoo', image: 'https://cdn.bulbagarden.net/upload/9/95/705Sliggoo.png'},
+{id: 'Goodra', name: 'Goodra', image: 'https://cdn.bulbagarden.net/upload/d/df/706Goodra.png'},
+{id: 'klefki', name: 'Klefki', image: 'https://cdn.bulbagarden.net/upload/0/04/707Klefki.png'},
+{id: 'phantump', name: 'Phantump', image: 'https://cdn.bulbagarden.net/upload/7/72/708Phantump.png'},
+{id: 'trevenant', name: 'Trevenant', image: 'https://cdn.bulbagarden.net/upload/4/4b/709Trevenant.png'},
+{id: 'pumpkaboo', name: 'Pumpkaboo', image: 'https://cdn.bulbagarden.net/upload/d/df/710Pumpkaboo.png'},
+{id: 'gourgeist', name: 'Gourgeist', image: 'https://cdn.bulbagarden.net/upload/8/88/711Gourgeist.png'},
+{id: 'bergmite', name: 'Bergmite', image: 'https://cdn.bulbagarden.net/upload/c/c3/712Bergmite.png'},
+{id: 'avalugg', name: 'Avalugg', image: 'https://cdn.bulbagarden.net/upload/0/04/713Avalugg.png'},
+{id: 'noibat', name: 'Noibat', image: 'https://cdn.bulbagarden.net/upload/0/07/714Noibat.png'},
+{id: 'noivern', name: 'Noivern', image: 'https://cdn.bulbagarden.net/upload/1/15/715Noivern.png'},
+{id: 'xerneas', name: 'Xerneas Active Mode', image: 'https://cdn.bulbagarden.net/upload/1/13/716Xerneas.png'},
+{id: 'xerneas neutral', name: 'Xerneas Neutral Mode', image: 'https://cdn.bulbagarden.net/upload/a/a7/Spr_6x_716N.png'},
+{id: 'yveltal', name: 'Yveltal', image: 'https://cdn.bulbagarden.net/upload/5/54/717Yveltal.png'},
+{id: 'zygarde', name: 'Zygarde 50% Forme', image: 'https://cdn.bulbagarden.net/upload/3/3a/718Zygarde.png'},
+{id: 'zygardog', name: 'Zygarde 10% Forme', image: 'https://cdn.bulbagarden.net/upload/9/94/718Zygarde-10Percent.png'},
+{id: 'zygarde complete', name: 'Zygarde Complete Forme', image: 'https://cdn.bulbagarden.net/upload/9/91/718Zygarde-Complete.png'},
+{id: 'diancie', name: 'Diancie', image: 'https://cdn.bulbagarden.net/upload/b/b3/719Diancie.png'},
+{id: 'dianciem', name: 'Mega Diancie', image: 'https://cdn.bulbagarden.net/upload/8/8f/719Diancie-Mega.png'},
+{id: 'hoopa', name: 'Hoopa Confined', image: 'https://cdn.bulbagarden.net/upload/f/fb/720Hoopa.png'},
+{id: 'hoopa unbound', name: 'Hoopa Unbound', image: 'https://cdn.bulbagarden.net/upload/a/ad/720Hoopa-Unbound.png'},
+{id: 'volcanion', name: 'Volcanion', image: 'https://cdn.bulbagarden.net/upload/4/44/721Volcanion.png'},
+{id: 'rowlet', name: 'Rowlet', image: 'https://cdn.bulbagarden.net/upload/7/74/722Rowlet.png'},
+{id: 'dartrix', name: 'Dartrix', image: 'https://cdn.bulbagarden.net/upload/1/1e/723Dartrix.png'},
+{id: 'decidueye', name: 'Decidueye', image: 'https://cdn.bulbagarden.net/upload/a/a4/724Decidueye.png'},
+{id: 'litten', name: 'Litten', image: 'https://cdn.bulbagarden.net/upload/0/0e/725Litten.png'},
+{id: 'torracat', name: 'Torracat', image: 'https://cdn.bulbagarden.net/upload/d/dc/726Torracat.png'},
+{id: 'incineroar', name: 'Incineroar', image: 'https://cdn.bulbagarden.net/upload/2/27/727Incineroar.png'},
+{id: 'popplio', name: 'Popplio', image: 'https://cdn.bulbagarden.net/upload/d/d8/728Popplio.png'},
+{id: 'brionne', name: 'Brionne', image: 'https://cdn.bulbagarden.net/upload/c/cd/729Brionne.png'},
+{id: 'primarina', name: 'Primarina', image: 'https://cdn.bulbagarden.net/upload/8/89/730Primarina.png'},
+{id: 'pikipek', name: 'Pikipek', image: 'https://cdn.bulbagarden.net/upload/1/15/731Pikipek.png'},
+{id: 'trumbeak', name: 'Trumbeak', image: 'https://cdn.bulbagarden.net/upload/5/5c/732Trumbeak.png'},
+{id: 'toucannon', name: 'Toucannon', image: 'https://cdn.bulbagarden.net/upload/7/78/733Toucannon.png'},
+{id: 'yungoos', name: 'Yungoos', image: 'https://cdn.bulbagarden.net/upload/0/08/734Yungoos.png'},
+{id: 'gumshoos', name: 'Gumshoos', image: 'https://cdn.bulbagarden.net/upload/b/ba/735Gumshoos.png'},
+{id: 'grubbin', name: 'Grubbin', image: 'https://cdn.bulbagarden.net/upload/1/14/736Grubbin.png'},
+{id: 'charjabug', name: 'Charjabug', image: 'https://cdn.bulbagarden.net/upload/e/ec/737Charjabug.png'},
+{id: 'vikavolt', name: 'Vikavolt', image: 'https://cdn.bulbagarden.net/upload/4/4e/738Vikavolt.png'},
+{id: 'crabrawler', name: 'Crabrawler', image: 'https://cdn.bulbagarden.net/upload/9/98/739Crabrawler.png'},
+{id: 'crabominable', name: 'Crabominable', image: 'https://cdn.bulbagarden.net/upload/1/17/740Crabominable.png'},
+{id: 'oricorio baile', name: 'Oricorio Baile Style', image: 'https://cdn.bulbagarden.net/upload/e/ed/741Oricorio-Baile.png'},
+{id: 'oricorio pom', name: 'Oricorio Pom-Pom Style', image: 'https://cdn.bulbagarden.net/upload/6/6d/741Oricorio-Pom-Pom.png'},
+{id: 'oricorio pau', name: 'Oricorio Pau Style', image: 'https://cdn.bulbagarden.net/upload/5/50/741Oricorio-Pa%27u.png'},
+{id: 'oricorio sensu', name: 'Oricorio Sensu Style', image: 'https://cdn.bulbagarden.net/upload/1/1c/741Oricorio-Sensu.png'},
+{id: 'cutiefly', name: 'Cutiefly', image: 'https://cdn.bulbagarden.net/upload/f/fa/742Cutiefly.png'},
+{id: 'ribombee', name: 'Ribombee', image: 'https://cdn.bulbagarden.net/upload/e/e4/743Ribombee.png'},
+{id: 'rockruff', name: 'Rockruff', image: 'https://cdn.bulbagarden.net/upload/5/51/744Rockruff.png'},
+{id: 'lycanroc', name: 'Lycanroc Midday Form', image: 'https://cdn.bulbagarden.net/upload/1/14/745Lycanroc.png'},
+{id: 'lycanroc midnight', name: 'Lycanroc Midnight Form', image: 'https://cdn.bulbagarden.net/upload/3/34/745Lycanroc-Midnight.png'},
+{id: 'lycanroc dusk', name: 'Lycanroc Dusk Form', image: 'https://cdn.bulbagarden.net/upload/3/37/745Lycanroc-Dusk.png'},
+{id: 'wishiwashi solo', name: 'Wishiwashi Solo Form', image: 'https://cdn.bulbagarden.net/upload/1/18/746Wishiwashi-Solo.png'},
+{id: 'wishiwashi school', name: 'Wishiwashi School Form', image: 'https://cdn.bulbagarden.net/upload/7/7f/746Wishiwashi-School.png'},
+{id: 'mareanie', name: 'Mareanie', image: 'https://cdn.bulbagarden.net/upload/d/d3/747Mareanie.png'},
+{id: 'toxapex', name: 'Toxapex', image: 'https://cdn.bulbagarden.net/upload/0/06/748Toxapex.png'},
+{id: 'mudbray', name: 'Mudbray', image: 'https://cdn.bulbagarden.net/upload/1/12/749Mudbray.png'},
+{id: 'mudsdale', name: 'Mudsdale', image: 'https://cdn.bulbagarden.net/upload/f/f7/750Mudsdale.png'},
+{id: 'dewpider', name: 'Dewpider', image: 'https://cdn.bulbagarden.net/upload/2/29/751Dewpider.png'},
+{id: 'araquanid', name: 'Araquanid', image: 'https://cdn.bulbagarden.net/upload/8/82/752Araquanid.png'},
+{id: 'fomantis', name: 'Fomantis', image: 'https://cdn.bulbagarden.net/upload/1/10/753Fomantis.png'},
+{id: 'lurantis', name: 'Lurantis', image: 'https://cdn.bulbagarden.net/upload/1/19/754Lurantis.png'},
+{id: 'morelull', name: 'Morelull', image: 'https://cdn.bulbagarden.net/upload/c/c9/755Morelull.png'},
+{id: 'shiinotic', name: 'Shiinotic', image: 'https://cdn.bulbagarden.net/upload/3/36/756Shiinotic.png'},
+{id: 'salandit', name: 'Salandit', image: 'https://cdn.bulbagarden.net/upload/2/27/757Salandit.png'},
+{id: 'salazzle', name: 'Salazzle', image: 'https://cdn.bulbagarden.net/upload/7/72/758Salazzle.png'},
+{id: 'stufful', name: 'Stufful', image: 'https://cdn.bulbagarden.net/upload/e/e5/759Stufful.png'},
+{id: 'bewear', name: 'Bewear', image: 'https://cdn.bulbagarden.net/upload/a/a4/760Bewear.png'},
+{id: 'bounsweet', name: 'Bounsweet', image: 'https://cdn.bulbagarden.net/upload/a/a1/761Bounsweet.png'},
+{id: 'steenee', name: 'Steenee', image: 'https://cdn.bulbagarden.net/upload/7/78/762Steenee.png'},
+{id: 'tsareena', name: 'Tsareena', image: 'https://cdn.bulbagarden.net/upload/2/23/763Tsareena.png'},
+{id: 'comfey', name: 'Comfey', image: 'https://cdn.bulbagarden.net/upload/c/c9/764Comfey.png'},
+{id: 'oranguru', name: 'Oranguru', image: 'https://cdn.bulbagarden.net/upload/d/d8/765Oranguru.png'},
+{id: 'passimian', name: 'Passimian', image: 'https://cdn.bulbagarden.net/upload/b/ba/766Passimian.png'},
+{id: 'wimpod', name: 'Wimpod', image: 'https://cdn.bulbagarden.net/upload/e/ef/767Wimpod.png'},
+{id: 'golisopod', name: 'Golisopod', image: 'https://cdn.bulbagarden.net/upload/b/b6/768Golisopod.png'},
+{id: 'Sandygast', name: 'Sandygast', image: 'https://cdn.bulbagarden.net/upload/f/f0/769Sandygast.png'},
+{id: 'palossand', name: 'Palossand', image: 'https://cdn.bulbagarden.net/upload/3/32/770Palossand.png'},
+{id: 'pyukumuku', name: 'Pyukumuku', image: 'https://cdn.bulbagarden.net/upload/4/4f/771Pyukumuku.png'},
+{id: 'Typenull', name: 'Type Null', image: 'https://cdn.bulbagarden.net/upload/f/fd/772Type_Null.png'},
+{id: 'silvally', name: 'Silvally', image: 'https://cdn.bulbagarden.net/upload/b/be/773Silvally.png'},
+{id: 'minior meteor', name: 'Minior Meteor Form', image: 'https://cdn.bulbagarden.net/upload/9/90/774Minior.png'},
+{id: 'minior red', name: 'Minior Red Core', image: 'https://cdn.bulbagarden.net/upload/2/20/774Minior-Core.png'},
+{id: 'minior orange', name: 'Minior Orange Core', image: 'https://cdn.bulbagarden.net/upload/b/b3/774Minior_Orange_Dream.png'},
+{id: 'minior yellow', name: 'Minior Yellow Core', image: 'https://cdn.bulbagarden.net/upload/d/dd/774Minior_Yellow_Dream.png'},
+{id: 'minior green', name: 'Minior Green Core', image: 'https://cdn.bulbagarden.net/upload/d/d8/774Minior_Green_Dream.png'},
+{id: 'minior blue', name: 'Minior Blue Core', image: 'https://cdn.bulbagarden.net/upload/8/81/774Minior_Blue_Dream.png'},
+{id: 'minior indigo', name: 'Minior Indigo Core', image: 'https://cdn.bulbagarden.net/upload/9/91/774Minior_Indigo_Dream.png'},
+{id: 'minior violet', name: 'Minior Violet Core', image: 'https://cdn.bulbagarden.net/upload/3/33/774Minior_Violet_Dream.png'},
+{id: 'komala', name: 'Komala', image: 'https://cdn.bulbagarden.net/upload/7/7d/775Komala.png'},
+{id: 'turtonator', name: 'Turtonator', image: 'https://cdn.bulbagarden.net/upload/1/15/776Turtonator.png'},
+{id: 'togedemaru', name: 'Togedemaru', image: 'https://cdn.bulbagarden.net/upload/5/5a/777Togedemaru.png'},
+{id: 'mimikyu', name: 'Mimikyu', image: 'https://cdn.bulbagarden.net/upload/9/9b/778Mimikyu.png'},
+{id: 'bruxish', name: 'Bruxish', image: 'https://cdn.bulbagarden.net/upload/9/92/779Bruxish.png'},
+{id: 'drampa', name: 'Drampa', image: 'https://cdn.bulbagarden.net/upload/d/dc/780Drampa.png'},
+{id: 'dhelmise', name: 'Dhelmise', image: 'https://cdn.bulbagarden.net/upload/2/2f/781Dhelmise.png'},
+{id: 'jangmoo', name: 'Jangmo-o', image: 'https://cdn.bulbagarden.net/upload/a/a0/782Jangmo-o.png'},
+{id: 'hakamoo', name: 'Hakamo-o', image: 'https://cdn.bulbagarden.net/upload/0/0d/783Hakamo-o.png'},
+{id: 'kommoo', name: 'Kommo-o', image: 'https://cdn.bulbagarden.net/upload/8/84/784Kommo-o.png'},
+{id: 'tapu koko', name: 'Tapu Koko', image: 'https://cdn.bulbagarden.net/upload/d/d0/785Tapu_Koko.png'},
+{id: 'tapu lele', name: 'Tapu Lele', image: 'https://cdn.bulbagarden.net/upload/4/4d/786Tapu_Lele.png'},
+{id: 'tapu bulu', name: 'Tapu Bulu', image: 'https://cdn.bulbagarden.net/upload/6/67/787Tapu_Bulu.png'},
+{id: 'tapu fini', name: 'Tapu Fini', image: 'https://cdn.bulbagarden.net/upload/6/66/788Tapu_Fini.png'},
+{id: 'cosmog', name: 'Cosmog', image: 'https://cdn.bulbagarden.net/upload/1/17/789Cosmog.png'},
+{id: 'cosmoem', name: 'Cosmoem', image: 'https://cdn.bulbagarden.net/upload/1/1b/790Cosmoem.png'},
+{id: 'solgaleo', name: 'Solgaleo', image: 'https://cdn.bulbagarden.net/upload/5/57/791Solgaleo.png'},
+{id: 'lunala', name: 'Lunala', image: 'https://cdn.bulbagarden.net/upload/9/9d/792Lunala.png'},
+{id: 'nihilego', name: 'Nihilego', image: 'https://cdn.bulbagarden.net/upload/2/2c/793Nihilego.png'},
+{id: 'buzzwole', name: 'Buzzwole', image: 'https://cdn.bulbagarden.net/upload/f/fa/794Buzzwole.png'},
+{id: 'pheromosa', name: 'Pheromosa', image: 'https://cdn.bulbagarden.net/upload/c/c7/795Pheromosa.png'},
+{id: 'xurkitree', name: 'Xurkitree', image: 'https://cdn.bulbagarden.net/upload/d/d2/796Xurkitree.png'},
+{id: 'celesteela', name: 'Celesteela', image: 'https://cdn.bulbagarden.net/upload/8/89/797Celesteela.png'},
+{id: 'kartana', name: 'Kartana', image: 'https://cdn.bulbagarden.net/upload/f/fe/798Kartana.png'},
+{id: 'guzzlord', name: 'Guzzlord', image: 'https://cdn.bulbagarden.net/upload/4/47/799Guzzlord.png'},
+{id: 'necrozma', name: 'Necrozma', image: 'https://cdn.bulbagarden.net/upload/4/44/800Necrozma.png'},
+{id: 'necrozma dusk', name: 'Dusk Mane Necrozma', image: 'https://cdn.bulbagarden.net/upload/8/80/800Necrozma-Dusk_Mane.png'},
+{id: 'necrozma dawn', name: 'Dawn Wings Necrozma', image: 'https://cdn.bulbagarden.net/upload/7/7a/800Necrozma-Dawn_Wings.png'},
+{id: 'ultra necrozma', name: 'Ultra Necrozma', image: 'https://cdn.bulbagarden.net/upload/8/8b/800Necrozma-Ultra.png'},
+{id: 'magearna', name: 'Magearna', image: 'https://cdn.bulbagarden.net/upload/0/0a/801Magearna.png'},
+{id: 'marshadow', name: 'Marshadow', image: 'https://cdn.bulbagarden.net/upload/8/89/802Marshadow.png'},
+{id: 'poipole', name: 'Poipole', image: 'https://cdn.bulbagarden.net/upload/e/e5/803Poipole.png'},
+{id: 'naganadel', name: 'Naganadel', image: 'https://cdn.bulbagarden.net/upload/d/de/804Naganadel.png'},
+{id: 'stakataka', name: 'Stakataka', image: 'https://cdn.bulbagarden.net/upload/2/27/805Stakataka.png'},
+{id: 'blacephelon', name: 'Blacephalon', image: 'https://cdn.bulbagarden.net/upload/a/a5/806Blacephalon.png'},
+{id: 'zeraora', name: 'Zeraora', image: 'https://cdn.bulbagarden.net/upload/a/a7/807Zeraora.png'},
+{id: 'meltan', name: 'Meltan', image: 'https://cdn.bulbagarden.net/upload/d/d1/808Meltan.png'},
+{id: 'melmetal', name: 'Melmetal', image: 'https://cdn.bulbagarden.net/upload/e/ea/809Melmetal.png'},
+{id: 'gmaxmelmetal', name: 'Gigantamax Melmetal', image: 'https://vignette.wikia.nocookie.net/pokemon/images/1/19/Melmetal_Gigantamax_SS.gif/revision/latest?cb=20191218125055'},
+{id: 'grookey', name: 'Grookey', image: 'https://cdn.bulbagarden.net/upload/9/93/810Grookey.png'},
+{id: 'thwacky', name: 'Thwackey', image: 'https://cdn.bulbagarden.net/upload/8/8f/811Thwackey.png'},
+{id: 'rillaboom', name: 'Rillaboom', image: 'https://cdn.bulbagarden.net/upload/4/47/812Rillaboom.png'},
+{id: 'gmaxrillaboom', name: 'Gigantamax Rillaboom', image: 'https://i.redd.it/lxk6tcufpr941.png'},
+{id: 'Scorbunny', name: 'Scorbunny', image: 'https://cdn.bulbagarden.net/upload/0/06/813Scorbunny.png'},
+{id: 'raboot', name: 'Raboot', image: 'https://cdn.bulbagarden.net/upload/b/bc/814Raboot.png'},
+{id: 'cinderace', name: 'Cinderace', image: 'https://cdn.bulbagarden.net/upload/b/b0/815Cinderace.png'},
+{id: 'gmaxcinderace', name: 'Gigantamax Cinderace', image: 'https://i.redd.it/nweuqkkcpr941.png'},
+{id: 'sobble', name: 'Sobble', image: 'https://cdn.bulbagarden.net/upload/9/9b/816Sobble.png'},
+{id: 'drizzile', name: 'Drizzile', image: 'https://cdn.bulbagarden.net/upload/6/6c/817Drizzile.png'},
+{id: 'inteleon', name: 'Inteleon', image: 'https://cdn.bulbagarden.net/upload/e/e4/818Inteleon.png'},
+{id: 'gmaxinteleon', name: 'Gigantamax Inteleon', image: 'https://nintendowire.com/wp-content/uploads/2020/01/Pokemon-Sword-and-Shield-Gigantamax-Inteleon.jpeg'},
+{id: 'skwovet', name: 'Skwovet', image: 'https://cdn.bulbagarden.net/upload/c/ce/819Skwovet.png'},
+{id: 'greedent', name: 'Greedent', image: 'https://cdn.bulbagarden.net/upload/6/6b/820Greedent.png'},
+{id: 'rookidea', name: 'Rookidee', image: 'https://cdn.bulbagarden.net/upload/7/79/821Rookidee.png'},
+{id: 'corvisquire', name: 'Corvisquire', image: 'https://cdn.bulbagarden.net/upload/e/ec/822Corvisquire.png'},
+{id: 'corviknight', name: 'Corviknight', image: 'https://cdn.bulbagarden.net/upload/0/0c/823Corviknight.png'},
+{id: 'gmax corviknight', name: 'Gigantamax Corviknight', image: 'https://cdn.bulbagarden.net/upload/2/2e/823Corviknight-Gigantamax.png'},
+{id: 'blipbug', name: 'Blipbug', image: 'https://cdn.bulbagarden.net/upload/4/4c/824Blipbug.png'},
+{id: 'dottler', name: 'Dottler', image: 'https://cdn.bulbagarden.net/upload/9/95/825Dottler.png'},
+{id: 'orbeetle', name: 'Orbeetle', image: 'https://cdn.bulbagarden.net/upload/7/79/826Orbeetle.png'},
+{id: 'gmax orbeetle', name: 'Gigantamax Orbeetle', image: 'https://cdn.bulbagarden.net/upload/2/24/826Orbeetle-Gigantamax.png'},
+{id: 'nickit', name: 'Nickit', image: 'https://cdn.bulbagarden.net/upload/2/22/827Nickit.png'},
+{id: 'thievul', name: 'Thievul', image: 'https://cdn.bulbagarden.net/upload/e/e7/828Thievul.png'},
+{id: 'gossifluer', name: 'Gossifleur', image: 'https://cdn.bulbagarden.net/upload/4/4c/829Gossifleur.png'},
+{id: 'eldegoss', name: 'Eldegoss', image: 'https://cdn.bulbagarden.net/upload/3/34/830Eldegoss.png'},
+{id: 'wooloo', name: 'Wooloo', image: 'https://cdn.bulbagarden.net/upload/1/1f/831Wooloo.png'},
+{id: 'dubwool', name: 'Dubwool', image: 'https://cdn.bulbagarden.net/upload/9/9a/832Dubwool.png'},
+{id: 'chewtle', name: 'Chewtle', image: 'https://cdn.bulbagarden.net/upload/2/22/833Chewtle.png'},
+{id: 'drednaw', name: 'Drednaw', image: 'https://cdn.bulbagarden.net/upload/b/be/834Drednaw.png'},
+{id: 'gmax drednaw', name: 'Gigantamax Drednaw', image: 'https://cdn.bulbagarden.net/upload/b/b4/834Drednaw-Gigantamax.png'},
+{id: 'yamper', name: 'Yamper', image: 'https://cdn.bulbagarden.net/upload/6/63/835Yamper.png'},
+{id: 'boltund', name: 'Boltund', image: 'https://cdn.bulbagarden.net/upload/e/e4/836Boltund.png'},
+{id: 'rolycoly', name: 'Rolycoly', image: 'https://cdn.bulbagarden.net/upload/a/a1/837Rolycoly.png'},
+{id: 'carkol', name: 'Carkol', image: 'https://cdn.bulbagarden.net/upload/e/e1/838Carkol.png'},
+{id: 'coalossal', name: 'Coalossal', image: 'https://cdn.bulbagarden.net/upload/0/0c/839Coalossal.png'},
+{id: 'gmax coalossal', name: 'Gigantamax Coalossal', image: 'https://cdn.bulbagarden.net/upload/b/b0/839Coalossal-Gigantamax.png'},
+{id: 'applin', name: 'Applin', image: 'https://cdn.bulbagarden.net/upload/c/cc/840Applin.png'},
+{id: 'flapple', name: 'Flapple', image: 'https://cdn.bulbagarden.net/upload/0/01/841Flapple.png'},
+{id: 'gmax flapple', name: 'Gigantamax Flapple', image: 'https://cdn.bulbagarden.net/upload/a/a2/841Flapple-Gigantamax.png'},
+{id: 'appletun', name: 'Appletun', image: 'https://cdn.bulbagarden.net/upload/3/36/842Appletun.png'},
+{id: 'gmax appletun', name: 'Gigantamax Appletun', image: 'https://cdn.bulbagarden.net/upload/a/a2/841Flapple-Gigantamax.png'},
+{id: 'silicobra', name: 'Silicobra', image: 'https://cdn.bulbagarden.net/upload/b/b5/843Silicobra.png'},
+{id: 'sandaconda', name: 'Sandaconda', image: 'https://cdn.bulbagarden.net/upload/1/11/844Sandaconda.png'},
+{id: 'gmax sandaconda', name: 'Gigantamax Sandaconda', image: 'https://cdn.bulbagarden.net/upload/1/19/844Sandaconda-Gigantamax.png'},
+{id: 'cramorant', name: 'Cramorant', image: 'https://cdn.bulbagarden.net/upload/f/f3/845Cramorant.png'},
+{id: 'arrokuda', name: 'Arrokuda', image: 'https://cdn.bulbagarden.net/upload/a/a9/846Arrokuda.png'},
+{id: 'barraskewda', name: 'Barraskewda', image: 'https://cdn.bulbagarden.net/upload/d/d9/847Barraskewda.png'},
+{id: 'toxel', name: 'Toxel', image: 'https://cdn.bulbagarden.net/upload/d/d5/848Toxel.png'},
+{id: 'toxtricity', name: 'Toxtricity', image: 'https://archives.bulbagarden.net/media/upload/5/56/849Toxtricity-Amped.png'},
+{id: 'toxtricity low', name: 'Toxtricity Low Key Form', image: 'https://archives.bulbagarden.net/media/upload/d/d1/849Toxtricity-Low_Key.png'},
+{id: 'gmaxtoxtricity', name: 'Gigantamax Toxtricity', image: 'https://archive-media-1.nyafuu.org/vp/image/1573/87/1573875526784.png'},
+{id: 'sizzlipede', name: 'Sizzlipede', image: 'https://cdn.bulbagarden.net/upload/f/f2/850Sizzlipede.png'},
+{id: 'centiskorch', name: 'Centiskorch', image: 'https://cdn.bulbagarden.net/upload/e/ed/851Centiskorch.png'},
+{id: 'gmax centiskorch', name: 'Gigantamax Centiskorch', image: 'https://cdn.bulbagarden.net/upload/b/b4/851Centiskorch-Gigantamax.png'},
+{id: 'clobbopus', name: 'Clobbopus', image: 'https://cdn.bulbagarden.net/upload/4/4e/852Clobbopus.png'},
+{id: 'grapploct', name: 'Grapploct', image: 'https://cdn.bulbagarden.net/upload/c/c4/853Grapploct.png'},
+{id: 'sinistea', name: 'Sinistea', image: 'https://cdn.bulbagarden.net/upload/b/b1/854Sinistea.png'},
+{id: 'polteageist', name: 'Polteageist', image: 'https://cdn.bulbagarden.net/upload/3/3d/855Polteageist.png'},
+{id: 'hatenna', name: 'Hatenna', image: 'https://cdn.bulbagarden.net/upload/8/8b/856Hatenna.png'},
+{id: 'hattrem', name: 'Hattrem', image: 'https://cdn.bulbagarden.net/upload/1/19/857Hattrem.png'},
+{id: 'hatterene', name: 'Hatterene', image: 'https://cdn.bulbagarden.net/upload/1/10/858Hatterene.png'},
+{id: 'gmax hatterene', name: 'Gigantamax Hatterene', image: 'https://cdn.bulbagarden.net/upload/6/6a/858Hatterene-Gigantamax.png'},
+{id: 'imbidimp', name: 'Impidimp', image: 'https://cdn.bulbagarden.net/upload/f/fb/859Impidimp.png'},
+{id: 'morgrem', name: 'Morgrem', image: 'https://cdn.bulbagarden.net/upload/6/66/860Morgrem.png'},
+{id: 'grimmsnarl', name: 'Grimmsnarl', image: 'https://cdn.bulbagarden.net/upload/6/67/861Grimmsnarl.png'},
+{id: 'gmax grimmsnarl', name: 'Gigantamax Grimmsnarl', image: 'https://cdn.bulbagarden.net/upload/4/45/861Grimmsnarl-Gigantamax.png'},
+{id: 'obstagoon', name: 'Obstagoon', image: 'https://cdn.bulbagarden.net/upload/0/08/862Obstagoon.png'},
+{id: 'perserrker', name: 'Perrserker', image: 'https://cdn.bulbagarden.net/upload/e/e0/863Perrserker.png'},
+{id: 'cursola', name: 'Cursola', image: 'https://cdn.bulbagarden.net/upload/d/db/864Cursola.png'},
+{id: 'sirfetchd', name: 'Sirfetchd', image: 'https://cdn.bulbagarden.net/upload/3/38/865Sirfetch%27d.png'},
+{id: 'mr rime', name: 'Mr Rime', image: 'https://cdn.bulbagarden.net/upload/5/51/866Mr._Rime.png'},
+{id: 'runergius', name: 'Runerigus', image: 'https://cdn.bulbagarden.net/upload/7/71/867Runerigus.png'},
+{id: 'milcery', name: 'Milcery', image: 'https://cdn.bulbagarden.net/upload/0/05/868Milcery.png'},
+{id: 'alcremie vanilla strawberry', name: 'Alcremie Vanilla Cream Strawberry Sweet', image: 'https://cdn.bulbagarden.net/upload/e/e0/869Alcremie.png'},
+{id: 'alcremie vanilla berry', name: 'Alcremie Vanilla Cream Berry Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-berry.png'},
+{id: 'alcremie vanilla love', name: 'Alcremie Vanilla Cream Love Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-love.png'},
+{id: 'alcremie vanilla star', name: 'Alcremie Vanilla Cream Star Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-star.png'},
+{id: 'alcremie vanilla clover', name: 'Alcremie Vanilla Cream Clover Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-clover.png'},
+{id: 'alcremie vanilla flower', name: 'Alcremie Vanilla Cream Flower Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-flower.png'},
+{id: 'alcremie vanilla ribbon', name: 'Alcremie Vanilla Cream Ribbon Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-ribbon.png'},
+{id: 'alcremie ruby strawberry', name: 'Alcremie Ruby Cream Strawberry Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-rc.png'},
+{id: 'alcremie ruby berry', name: 'Alcremie Ruby Cream Berry Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-rcberry.png'},
+{id: 'alcremie ruby love', name: 'Alcremie Ruby Cream Love Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-rclove.png'},
+{id: 'alcremie ruby star', name: 'Alcremie Ruby Cream Star Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-rcstar.png'},
+{id: 'alcremie ruby clover', name: 'Alcremie Ruby Cream Clover Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-rcclover.png'},
+{id: 'alcremie ruby flower', name: 'Alcremie Ruby Cream Flower Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-rcflower.png'},
+{id: 'alcremie ruby ribbon', name: 'Alcremie Ruby Cream Ribbon Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-rcribbon.png'},
+{id: 'alcremie matcha strawberry', name: 'Alcremie Matcha Cream Strawberry Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-mac.png'},
+{id: 'alcremie matcha berry', name: 'Alcremie Matcha Cream Berry Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-macberry.png'},
+{id: 'alcremie matcha love', name: 'Alcremie Matcha Cream Love Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-maclove.png'},
+{id: 'alcremie matcha star', name: 'Alcremie Matcha Cream Star Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-macstar.png'},
+{id: 'alcremie matcha clover', name: 'Alcremie Matcha Cream Clover Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-macclover.png'},
+{id: 'alcremie matcha flower', name: 'Alcremie Matcha Cream Flower Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-macflower.png'},
+{id: 'alcremie matcha ribbon', name: 'Alcremie Matcha Cream Ribbon Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-macribbon.png'},
+{id: 'alcremie mint strawberry', name: 'Alcremie Mint Cream Strawberry Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-mic.png'},
+{id: 'alcremie mint berry', name: 'Alcremie Mint Cream Berry Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-micberry.png'},
+{id: 'alcremie mint love', name: 'Alcremie Mint Cream Love Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-micheart.png'},
+{id: 'alcremie mint star', name: 'Alcremie Mint Cream Star Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-micstar.png'},
+{id: 'alcremie mint clover', name: 'Alcremie Mint Cream Clover Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-micclover.png'},
+{id: 'alcremie mint flower', name: 'Alcremie Mint Cream Flower Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-micflower.png'},
+{id: 'alcremie mint ribbon', name: 'Alcremie Mint Cream Ribbon Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-micribbon.png'},
+{id: 'alcremie lemon strawberry', name: 'Alcremie Lemon Cream Strawberry Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-lc.png'},
+{id: 'alcremie lemon berry', name: 'Alcremie Lemon Cream Berry Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-lcberry.png'},
+{id: 'alcremie lemon love', name: 'Alcremie Lemon Cream Love Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-lclove.png'},
+{id: 'alcremie lemon star', name: 'Alcremie Lemon Cream Star Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-lcstar.png'},
+{id: 'alcremie lemon clover', name: 'Alcremie Lemon Cream Clover Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-lcclover.png'},
+{id: 'alcremie lemon flower', name: 'Alcremie Lemon Cream Flower Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-lcflower.png'},
+{id: 'alcremie lemon ribbon', name: 'Alcremie Lemon Cream Ribbon Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-lcribbon.png'},
+{id: 'alcremie salted strawberry', name: 'Alcremie Salted Cream Strawberry Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-sc.png'},
+{id: 'alcremie salted berry', name: 'Alcremie Salted Cream Berry Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-scberry.png'},
+{id: 'alcremie salted love', name: 'Alcremie Salted Cream Love Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-sclove.png'},
+{id: 'alcremie salted star', name: 'Alcremie Salted Cream Star Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-scstar.png'},
+{id: 'alcremie salted clover', name: 'Alcremie Salted Cream Clover Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-scclover.png'},
+{id: 'alcremie salted flower', name: 'Alcremie Salted Cream Flower Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-scflower.png'},
+{id: 'alcremie salted ribbon', name: 'Alcremie Salted Cream Ribbon Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-scribbon.png'},
+{id: 'alcremie rss', name: 'Alcremie Ruby Swirl Strawberry Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-rs.png'},
+{id: 'alcremie rsb', name: 'Alcremie Ruby Swirl Berry Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-rsberry.png'},
+{id: 'alcremie rsl', name: 'Alcremie Ruby Swirl Love Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-rslove.png'},
+{id: 'alcremie rsstar', name: 'Alcremie Ruby Swirl Star Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-rsstar.png'},
+{id: 'alcremie rsc', name: 'Alcremie Ruby Swirl Clover Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-rsclover.png'},
+{id: 'alcremie rsf', name: 'Alcremie Ruby Swirl Flower Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-rsflower.png'},
+{id: 'alcremie rsr', name: 'Alcremie Ruby Swirl Ribbon Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-rsribbon.png'},
+{id: 'alcremie csstraw', name: 'Alcremie Caramel Swirl Strawberry Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-cs.png'},
+{id: 'alcremie csb', name: 'Alcremie Caramel Swirl Berry Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-csberry.png'},
+{id: 'alcremie csl', name: 'Alcremie Caramel Swirl Love Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-cslove.png'},
+{id: 'alcremie css', name: 'Alcremie Caramel Swirl Star Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-csstar.png'},
+{id: 'alcremie csc', name: 'Alcremie Caramel Swirl Clover Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-csclover.png'},
+{id: 'alcremie csf', name: 'Alcremie Caramel Swirl Flower Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-csflower.png'},
+{id: 'alcremie csr', name: 'Alcremie Caramel Swirl Ribbon Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-csribbon.png'},
+{id: 'alcremie rainbow straw', name: 'Alcremie Rainbow Swirl Strawberry Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-ras.png'},
+{id: 'alcremie rain berry', name: 'Alcremie Rainbow Swirl Berry Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-rasberry.png'},
+{id: 'alcremie rain love', name: 'Alcremie Rainbow Swirl Love Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-raslove.png'},
+{id: 'alcremie rain star', name: 'Alcremie Rainbow Swirl Star Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-rasstar.png'},
+{id: 'alcremie rain clover', name: 'Alcremie Rainbow Swirl Clover Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-rasclover.png'},
+{id: 'alcremie rain flower', name: 'Alcremie Rainbow Swirl Flower Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-rasflower.png'},
+{id: 'alcremie rain ribbon', name: 'Alcremie Rainbow Swirl Ribbon Sweet', image: 'https://www.serebii.net/swordshield/pokemon/869-rasribbon.png'},
+{id: 'alcremie gmax', name: 'Gigantamax Alcremie', image: 'https://cdn.bulbagarden.net/upload/4/40/869Alcremie-Gigantamax.png'},
+{id: 'falinks', name: 'Falinks', image: 'https://cdn.bulbagarden.net/upload/b/bb/870Falinks.png'},
+{id: 'pincurchin', name: 'Pincurchin', image: 'https://cdn.bulbagarden.net/upload/1/11/871Pincurchin.png'},
+{id: 'snom', name: 'Snom', image: 'https://cdn.bulbagarden.net/upload/f/f9/872Snom.png'},
+{id: 'frosmoth', name: 'Frosmoth', image: 'https://cdn.bulbagarden.net/upload/0/04/873Frosmoth.png'},
+{id: 'stonjourner', name: 'Stonjourner', image: 'https://cdn.bulbagarden.net/upload/6/60/874Stonjourner.png'},
+{id: 'eiscue ice', name: 'Eiscue Ice Face', image: 'https://cdn.bulbagarden.net/upload/9/9b/875Eiscue-Ice.png'},
+{id: 'eiscue noice', name: 'Eiscue Noice Face', image: 'https://www.serebii.net/swordshield/pokemon/875-n.png'},
+{id: 'indeedeem', name: 'Indeedee Male', image: 'https://archives.bulbagarden.net/media/upload/8/8a/876Indeedee-Male.png'},
+{id: 'indeedeef', name: 'Indeedee Female', image: 'https://archives.bulbagarden.net/media/upload/c/c5/876Indeedee-Female.png'},
+{id: 'morpeko full', name: 'Morpeko Full Belly Mode', image: 'https://cdn.bulbagarden.net/upload/d/df/877Morpeko-Full.png'},
+{id: 'morpeko hangry', name: 'Morpeko Hangry Mode', image: 'https://cdn.bulbagarden.net/upload/d/df/877Morpeko-Hangry.png'},
+{id: 'cufant', name: 'Cufant', image: 'https://cdn.bulbagarden.net/upload/5/56/878Cufant.png'},
+{id: 'copperajah', name: 'Copperajah', image: 'https://cdn.bulbagarden.net/upload/7/76/879Copperajah.png'},
+{id: 'gmax copper', name: 'Gigantamax Copperajah', image: 'https://cdn.bulbagarden.net/upload/1/16/879Copperajah-Gigantamax.png'},
+{id: 'dracozolt', name: 'Dracozolt', image: 'https://cdn.bulbagarden.net/upload/9/91/880Dracozolt.png'},
+{id: 'arctozolt', name: 'Arctozolt', image: 'https://cdn.bulbagarden.net/upload/4/40/881Arctozolt.png'},
+{id: 'dracovish', name: 'Dracovish', image: 'https://cdn.bulbagarden.net/upload/1/16/882Dracovish.png'},
+{id: 'arctovish', name: 'Arctovish', image: 'https://cdn.bulbagarden.net/upload/0/03/883Arctovish.png'},
+{id: 'duraludon', name: 'Duraludon', image: 'https://cdn.bulbagarden.net/upload/3/38/884Duraludon.png'},
+{id: 'gmax duraludon', name: 'Gigantamax Duraludon', image: 'https://cdn.bulbagarden.net/upload/1/1b/884Duraludon-Gigantamax.png'},
+{id: 'dreepy', name: 'Dreepy', image: 'https://cdn.bulbagarden.net/upload/a/a9/885Dreepy.png'},
+{id: 'drakloak', name: 'Drakloak', image: 'https://cdn.bulbagarden.net/upload/e/e1/886Drakloak.png'},
+{id: 'dragapult', name: 'Dragapult', image: 'https://cdn.bulbagarden.net/upload/f/f7/887Dragapult.png'},
+{id: 'zacian', name: 'Zacian Hero of Many Battles', image: 'https://cdn.bulbagarden.net/upload/e/e3/888Zacian-Hero.png'},
+{id: 'zacian sword', name: 'Zacian Crowned Sword', image: 'https://cdn.bulbagarden.net/upload/c/ca/888Zacian.png'},
+{id: 'zamazenta hero', name: 'Zamazenta Hero of Many Battles', image: 'https://cdn.bulbagarden.net/upload/9/97/889Zamazenta-Hero.png'},
+{id: 'Zamazenta Crowned Shield', name: 'Zamazenta Crowned Shield', image: 'https://cdn.bulbagarden.net/upload/7/72/889Zamazenta.png'},
+{id: 'eternatus', name: 'Eternatus', image: 'https://cdn.bulbagarden.net/upload/6/62/890Eternatus.png'},
+{id: 'eternamax eternatus', name: 'Eternamax Eternatus', image: 'https://www.serebii.net/swordshield/pokemon/890-e.png'},
+{id: 'kubfu', name: 'Kubfu', image: 'https://cdn.bulbagarden.net/upload/8/86/Kubfu.png'},
+{id: 'urshifu', name: 'Urshifu Single Strike Style', image: 'https://cdn.bulbagarden.net/upload/7/77/Urshifu-Single_Strike.png'},
+{id: 'urshifu rapid', name: 'Urshifu Rapid Strike Style', image: 'https://cdn.bulbagarden.net/upload/6/69/Urshifu-Rapid_Strike.png'},
+{id: 'urshifu gmax single', name: 'Gigantamax Urshifu Single Strike Style', image: 'https://serebii.net/swordshield/gigantamaxurshifu1.jpg'},
+{id: 'urshifu gmax rapid', name: 'Gigantamax Urshifu Rapid Strike Style', image: 'https://serebii.net/swordshield/gigantamaxurshifu2.jpg'},
+{id: 'calyrex', name: 'Calyrex', image: 'https://cdn.bulbagarden.net/upload/2/2e/Calyrex.png'},
+{id: 'elecregi', name: 'Regilectric', image: 'https://www.serebii.net/swordshield/regi1.jpg'},
+{id: 'Regidraco', name: 'Regidraco', image: 'https://www.serebii.net/swordshield/regi2.jpg'}
+];
+
+var myPicker = new picker.Picker({
+    items: items
+});
+
+var pickerUI = new PickerUI(myPicker, {
+    elements: {
+        pick: "#pick",
+        pass: "#pass",
+        undo: "#undo",
+        redo: "#redo",
+        evaluating: "#evaluating",
+        favorites: "#favorites",
+        shortcodeLink: "#shortcode-link",
+        sharedListContainer: "#shared-list-modal",
+        sharedList: "#shared-list",
+        sharedListContinue: "#shared-list-continue",
+        sharedListSkip: ".shared-list-skip"
+    }
+});
+
+pickerUI.initialize();
+
+/* Sortable favorites - you can safely remove this, and the Sortable.min.js script, if you don't want to be able to sort your favorite list. */
+var sortable = new Sortable(pickerUI.elem.favorites.get(0), {
+    draggable: '.item',
+    animation: 100,
+    onStart: function() {
+        pickerUI.elem.favorites.addClass("sorting");
+    },
+    onEnd: function() {
+        pickerUI.elem.favorites.removeClass("sorting");
+    },
+    onUpdate: function() {
+        myPicker.setFavorites(pickerUI.elem.favorites.children().map(function() {
+            return pickerUI.getItem(this);
+        }).get());
+        pickerUI.update(true);
+    }
+});
+/* End sortable favorites */
+</script>
+</body>
+</html>

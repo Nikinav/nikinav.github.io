@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="initial-scale=1.0">
+<title>Picker</title>
+<style>
+body {
+    background:#FFF;
+    color:#000;
+    font-family:verdana, sans-serif;
+    font-size:10pt;
+    margin:0;
+    padding:10px;
+}
+
+a:link, a:visited {
+    color:#008;
+    font-weight:bold;
+    text-decoration:none;
+}
+
+a:active, a:hover {
+    color:#ACF;
+}
+
+.info {
+    font-weight:bold;
+}
+
+button {
+    font-family:inherit;
+    cursor:pointer;
+    border:0;
+    border-radius:3px;
+    padding:0.3em 0.5em;
+    background:#CCC;
+    color:#000;
+}
+
+button:hover {
+    background:#DDD;
+}
+
+button.disabled {
+    background:#DDD;
+    color:#888;
+    cursor:not-allowed;
+}
+
+button.disabled:hover {
+    background:#DDD;
+}
+
+#container {
+    position:relative;
+    margin-left:-10px;
+    margin-right:-10px;
+    padding:10px;
+    overflow:hidden;
+}
+
+@media (min-width:1024px) {
+    /* Put the found favorites beside the picking div when the window is sufficiently large */
+    #picking {
+        float:left;
+        width:636px;
+    }
+
+    #secondary {
+        margin-left:646px;
+    }
+}
+
+@media (min-width:1300px) {
+    /* Once we get to the point where 636px is less than half of the width of the screen, make the picking div just take up half */
+    #picking {
+        width:50%;
+    }
+
+    #secondary {
+        margin-left:51%;
+    }
+}
+
+#pick {
+    background:#58F;
+    color:#FFF;
+    font-size:larger;
+    font-weight:bold;
+    width:6em;
+    border-radius:5px;
+    margin-right:10px;
+}
+
+#pick.disabled {
+    background:#ACF;
+}
+
+#pick:hover {
+    background:#ACF;
+}
+
+.item-list {
+    padding:0;
+    list-style-type:none;
+    line-height:100px;
+}
+
+.item-list li {
+    margin:0;
+    display:inline-block;
+    height:100px;
+    width:100px;
+    line-height:100px;
+    border:3px solid transparent;
+    text-align:center;
+    position:relative;
+    vertical-align:top;
+    overflow:hidden;
+    border-radius:100%;
+    background:#F7F7F7;
+    color:#000;
+}
+
+.item-list li img {
+    vertical-align:middle;
+    max-height:100%;
+    max-width:100%;
+}
+
+.item-list li span {
+    display:inline-block;
+    vertical-align:middle;
+    line-height:1.2;
+}
+
+@media (max-width:636px) {
+    .item-list {
+        line-height:75px;
+    }
+
+    .item-list li {
+        line-height:75px;
+        height:75px;
+        width:75px;
+    }
+}
+
+@media (max-width:423px) {
+    .item-list {
+        line-height:50px;
+    }
+
+    .item-list li {
+        line-height:50px;
+        height:50px;
+        width:50px;
+    }
+}
+
+#evaluating li {
+    cursor:pointer;
+}
+
+#favorites li {
+    cursor:move;
+}
+
+.item-list li:hover {
+    background:#CDF;
+}
+
+.item-list.sorting li:hover {
+    background:#F7F7F7;
+}
+
+#evaluating li.selected {
+    border:3px solid #7AC;
+}
+
+#evaluating, #buttons {
+    text-align:center;
+    margin:auto;
+}
+
+#evaluating li.notice {
+    width:auto;
+    height:auto;
+    max-width:260px;
+    margin:auto;
+    background:#F7F7F7;
+    border-radius:10px;
+    padding:30px 30px;
+    color:#000;
+    text-align:center;
+    line-height:1.4;
+    cursor:auto;
+    font-size:10pt;
+}
+
+#buttons {
+    margin-top:30px;
+    position:relative;
+    z-index:3;
+}
+</style>
+</head>
+<body>
+<h1>Picker</h1>
+
+<p>You can include any content you want here.</p>
+
+<div id="container">
+
+<div id="picking">
+<ul id="evaluating" class="item-list">
+</ul>
+
+<p id="buttons"><button id="pick">Pick</button> <button id="pass">Pass</button> <button id="undo">Undo</button> <button id="redo">Redo</button></p>
+</div>
+
+<div id="secondary">
+<h2>Found favorites</h2>
+
+<ol id="favorites" class="item-list">
+</ol>
+</div>
+</div>
+<script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
+<script src="picker.js"></script>
+<script src="picker-ui.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.7.0/Sortable.min.js"></script>
+<script>
+'use strict';
+
+var items = [
+    // Define your items here
+{id: 'cptauros', name: 'Combat Breed Paldean Tauros', image: 'https://archives.bulbagarden.net/media/upload/9/95/128Tauros-Paldea_Combat.png'},
+{id: 'bptauros', name: 'Blaze Breed Paldean Tauros', image: 'https://archives.bulbagarden.net/media/upload/b/b0/128Tauros-Paldea_Blaze.png'},
+{id: 'aptauros', name: 'Aqua Breed Paldean Tauros', image: 'https://archives.bulbagarden.net/media/upload/6/66/128Tauros-Paldea_Aqua.png'},
+{id: 'pwooper', name: 'Paldean Wooper', image: 'https://archives.bulbagarden.net/media/upload/1/15/194Wooper-Paldea.png'},
+{id: 'sprigatito', name: 'Sprigatito', image: 'https://archives.bulbagarden.net/media/upload/e/eb/Sprigatito.png'},
+{id: 'floragato', name: 'Floragato', image: 'https://archives.bulbagarden.net/media/upload/1/16/Floragato.png'},
+{id: 'meowscarada', name: 'Meowscarada', image: 'https://archives.bulbagarden.net/media/upload/f/f6/Meowscarada.png'},
+{id: 'fuecoco', name: 'Fuecoco', image: 'https://archives.bulbagarden.net/media/upload/c/cb/Fuecoco.png'},
+{id: 'crocalor', name: 'Crocalor', image: 'https://archives.bulbagarden.net/media/upload/6/6a/Crocalor.png'},
+{id: 'skeledirge', name: 'Skeledirge', image: 'https://archives.bulbagarden.net/media/upload/d/d5/Skeledirge.png'},
+{id: 'quaxly', name: 'Quaxly', image: 'https://archives.bulbagarden.net/media/upload/4/49/Quaxly.png'},
+{id: 'quaxwell', name: 'Quaxwell', image: 'https://archives.bulbagarden.net/media/upload/c/cf/Quaxwell.png'},
+{id: 'quaquaval', name: 'Quaquaval', image: 'https://archives.bulbagarden.net/media/upload/b/bd/Quaquaval.png'},
+{id: 'lechonk', name: 'Lechonk', image: 'https://archives.bulbagarden.net/media/upload/8/86/915Lechonk.png'},
+{id: 'oinkolognem', name: 'Male Oinkologne', image: 'https://archives.bulbagarden.net/media/upload/5/5b/Menu_SV_Oinkologne.png'},
+{id: 'oinkolognef', name: 'Female Oinkologne', image: 'https://archives.bulbagarden.net/media/upload/2/20/Menu_SV_Oinkologne-Female.png'},
+{id: 'tarountula', name: 'Tarountula', image: 'https://archives.bulbagarden.net/media/upload/f/fb/Tarountula.png'},
+{id: 'spidops', name: 'Spidops', image: 'https://archives.bulbagarden.net/media/upload/b/b3/Menu_SV_Spidops.png'},
+{id: 'nymble', name: 'Nymble', image: 'https://archives.bulbagarden.net/media/upload/6/62/Menu_SV_Nymble.png'},
+{id: 'lokix', name: 'Lokix', image: 'https://archives.bulbagarden.net/media/upload/9/9a/Menu_SV_Lokix.png'},
+{id: 'pawmi', name: 'Pawmi', image: 'https://archives.bulbagarden.net/media/upload/6/68/Pawmi.png'},
+{id: 'pawmo', name: 'Pawmo', image: 'https://archives.bulbagarden.net/media/upload/6/63/Menu_SV_Pawmo.png'},
+{id: 'pawmot', name: 'Pawmot', image: 'https://archives.bulbagarden.net/media/upload/7/72/Menu_SV_Pawmot.png'},
+{id: 'tandemaus', name: 'Tandemaus', image: 'https://archives.bulbagarden.net/media/upload/7/79/Menu_SV_Tandemaus.png'},
+{id: 'fourmaushold', name: 'Family of Four Maushold', image: 'https://archives.bulbagarden.net/media/upload/9/90/Menu_SV_Maushold.png'},
+{id: 'threemaushold', name: 'Family of Three Maushold', image: 'https://archives.bulbagarden.net/media/upload/1/1b/Menu_SV_Maushold-Three.png'},
+{id: 'fidough', name: 'Fidough', image: 'https://archives.bulbagarden.net/media/upload/2/2d/Fidough.png'},
+{id: 'dachsbund', name: 'Dachsbun', image: 'https://archives.bulbagarden.net/media/upload/e/e7/Dachsbun.png'},
+{id: 'smoliv', name: 'Smoliv', image: 'https://archives.bulbagarden.net/media/upload/8/83/Smoliv.png'},
+{id: 'dolliv', name: 'Dolliv', image: 'https://archives.bulbagarden.net/media/upload/0/0d/Menu_SV_Dolliv.png'},
+{id: 'arboliva', name: 'Arboliva', image: 'https://archives.bulbagarden.net/media/upload/2/23/Menu_SV_Arboliva.png'},
+{id: 'gpsquawkabilly', name: 'Green Plumage Squawkabilly', image: 'https://archives.bulbagarden.net/media/upload/a/a8/Menu_SV_Squawkabilly.png'},
+{id: 'bpsquawkabilly', name: 'Blue Plumage Squawkabilly', image: 'https://archives.bulbagarden.net/media/upload/a/ab/Menu_SV_Squawkabilly-Blue.png'},
+{id: 'ypsquawkabilly', name: 'Yellow Plumage Squawkabilly', image: 'https://archives.bulbagarden.net/media/upload/b/bc/Menu_SV_Squawkabilly-Yellow.png'},
+{id: 'wpsquawkabilly', name: 'White Plumage Squawkabilly', image: 'https://archives.bulbagarden.net/media/upload/5/55/Menu_SV_Squawkabilly-White.png'},
+{id: 'nacli', name: 'Nacli', image: 'https://archives.bulbagarden.net/media/upload/6/69/Menu_SV_Nacli.png'},
+{id: 'naclstack', name: 'Naclstack', image: 'https://archives.bulbagarden.net/media/upload/e/e1/Menu_SV_Naclstack.png'},
+{id: 'garganacl', name: 'Garganacl', image: 'https://archives.bulbagarden.net/media/upload/e/ed/Menu_SV_Garganacl.png'},
+{id: 'charcadet', name: 'Charcadet', image: 'https://archives.bulbagarden.net/media/upload/5/53/Charcadet.png'},
+{id: 'armarouge', name: 'Armarouge', image: 'https://archives.bulbagarden.net/media/upload/b/b5/Armarouge.png'},
+{id: 'ceruledge', name: 'Ceruledge', image: 'https://archives.bulbagarden.net/media/upload/5/52/Ceruledge.png'},
+{id: 'tadbulb', name: 'Tadbulb', image: 'https://archives.bulbagarden.net/media/upload/3/3c/Menu_SV_Tadbulb.png'},
+{id: 'bellibolt', name: 'Bellibolt', image: 'https://archives.bulbagarden.net/media/upload/6/6e/Bellibolt.png'},
+{id: 'wattrel', name: 'Wattrel', image: 'https://archives.bulbagarden.net/media/upload/d/d2/Menu_SV_Wattrel.png'},
+{id: 'kilowattrel', name: 'Kilowattrel', image: 'https://archives.bulbagarden.net/media/upload/7/74/Menu_SV_Kilowattrel.png'},
+{id: 'maschiff', name: 'Maschiff', image: 'https://archives.bulbagarden.net/media/upload/7/71/Maschiff.png'},
+{id: 'mabosstiff', name: 'Mabosstiff', image: 'https://archives.bulbagarden.net/media/upload/f/f3/Mabosstiff.png'},
+{id: 'shroodle', name: 'Shroodle', image: 'https://archives.bulbagarden.net/media/upload/8/8b/Menu_SV_Shroodle.png'},
+{id: 'grafaiai', name: 'Grafaiai', image: 'https://archives.bulbagarden.net/media/upload/9/96/Grafaiai.png'},
+{id: 'bramblin', name: 'Bramblin', image: 'https://archives.bulbagarden.net/media/upload/2/22/Menu_SV_Bramblin.png'},
+{id: 'brambleghast', name: 'Brambleghast', image: 'https://archives.bulbagarden.net/media/upload/a/a8/Menu_SV_Brambleghast.png'},
+{id: 'toedscool', name: 'Toedscool', image: 'https://archives.bulbagarden.net/media/upload/b/b8/Menu_SV_Toedscool.png'},
+{id: 'toedscruel', name: 'Toedscruel', image: 'https://archives.bulbagarden.net/media/upload/4/40/Menu_SV_Toedscruel.png'},
+{id: 'klawf', name: 'Klawf', image: 'https://archives.bulbagarden.net/media/upload/9/96/Klawf.png'},
+{id: 'capsakid', name: 'Capsakid', image: 'https://archives.bulbagarden.net/media/upload/1/1c/Menu_SV_Capsakid.png'},
+{id: 'scovillian', name: 'Scovillain', image: 'https://archives.bulbagarden.net/media/upload/2/22/Menu_SV_Scovillain.png'},
+{id: 'rellor', name: 'Rellor', image: 'https://archives.bulbagarden.net/media/upload/0/0c/Menu_SV_Rellor.png'},
+{id: 'rabsca', name: 'Rabsca', image: 'https://archives.bulbagarden.net/media/upload/4/4b/Menu_SV_Rabsca.png'},
+{id: 'flittle', name: 'Flittle', image: 'https://archives.bulbagarden.net/media/upload/0/0c/Menu_SV_Flittle.png'},
+{id: 'espathra', name: 'Espathra', image: 'https://archives.bulbagarden.net/media/upload/9/93/Menu_SV_Espathra.png'},
+{id: 'tinkatink', name: 'Tinkatink', image: 'https://archives.bulbagarden.net/media/upload/1/10/Tinkatink.png'},
+{id: 'tinkatuff', name: 'Tinkatuff', image: 'https://archives.bulbagarden.net/media/upload/6/66/Tinkatuff.png'},
+{id: 'tinkaton', name: 'Tinkaton', image: 'https://archives.bulbagarden.net/media/upload/9/90/Tinkaton.png'},
+{id: 'wiglett', name: 'Wiglett', image: 'https://archives.bulbagarden.net/media/upload/e/e6/Wiglett.png'},
+{id: 'wugtrio', name: 'Wugtrio', image: 'https://archives.bulbagarden.net/media/upload/b/b2/Wugtrio.png'},
+{id: 'bombirdier', name: 'Bombirdier', image: 'https://archives.bulbagarden.net/media/upload/5/52/Bombirdier.png'},
+{id: 'finizen', name: 'Finizen', image: 'https://archives.bulbagarden.net/media/upload/8/8e/Menu_SV_Finizen.png'},
+{id: 'zeropalafin', name: 'Zero Form Palafin', image: 'https://archives.bulbagarden.net/media/upload/e/ea/Palafin-Zero.png'},
+{id: 'heropalafin', name: 'Hero Form Palafin', image: 'https://archives.bulbagarden.net/media/upload/e/ec/Palafin-Hero.png'},
+{id: 'varoom', name: 'Varoom', image: 'https://archives.bulbagarden.net/media/upload/9/9b/Menu_SV_Varoom.png'},
+{id: 'revavroom', name: 'Revavroom', image: 'https://archives.bulbagarden.net/media/upload/6/66/Menu_SV_Revavroom.png'},
+{id: 'cyclizar', name: 'Cyclizar', image: 'https://archives.bulbagarden.net/media/upload/1/12/Cyclizar.png'},
+{id: 'orthworm', name: 'Orthworm', image: 'https://archives.bulbagarden.net/media/upload/f/f1/Orthworm.png'},
+{id: 'glimmet', name: 'Glimmet', image: 'https://archives.bulbagarden.net/media/upload/e/ef/Menu_SV_Glimmet.png'},
+{id: 'glimmora', name: 'Glimmora', image: 'https://archives.bulbagarden.net/media/upload/e/e7/Menu_SV_Glimmora.png'},
+{id: 'greavard', name: 'Greavard', image: 'https://archives.bulbagarden.net/media/upload/2/28/Greavard.png'},
+{id: 'houndstone', name: 'Houndstone', image: 'https://archives.bulbagarden.net/media/upload/b/ba/Menu_SV_Houndstone.png'},
+{id: 'flamigo', name: 'Flamigo', image: 'https://archives.bulbagarden.net/media/upload/b/be/Menu_SV_Flamigo.png'},
+{id: 'cetoddle', name: 'Cetoddle', image: 'https://archives.bulbagarden.net/media/upload/f/fb/Cetoddle.png'},
+{id: 'cetitan', name: 'Cetitan', image: 'https://archives.bulbagarden.net/media/upload/8/82/Cetitan.png'},
+{id: 'veluza', name: 'Veluza', image: 'https://archives.bulbagarden.net/media/upload/8/86/Menu_SV_Veluza.png'},
+{id: 'dondozo', name: 'Dondozo', image: 'https://archives.bulbagarden.net/media/upload/d/d9/Menu_SV_Dondozo.png'},
+{id: 'cftatsugiri', name: 'Curly Form Tatsugiri', image: 'https://archives.bulbagarden.net/media/upload/0/02/Tatsugiri.png'},
+{id: 'dftatsugiri', name: 'Droopy Form Tatsugiri', image: 'https://archives.bulbagarden.net/media/upload/4/4c/Menu_SV_Tatsugiri-Droopy.png'},
+{id: 'sftatsugiri', name: 'Stretchy Form Tatsugiri', image: 'https://archives.bulbagarden.net/media/upload/a/a0/Menu_SV_Tatsugiri-Stretchy.png'},
+{id: 'annihilape', name: 'Annihilape', image: 'https://archives.bulbagarden.net/media/upload/7/79/Menu_SV_Annihilape.png'},
+{id: 'clodsire', name: 'Clodsire', image: 'https://archives.bulbagarden.net/media/upload/c/c3/Menu_SV_Clodsire.png'},
+{id: 'farigiraf', name: 'Farigiraf', image: 'https://archives.bulbagarden.net/media/upload/1/11/Farigiraf.png'},
+{id: 'twodudunsparce', name: 'Two-Segment Form Dudunsparce', image: 'https://archives.bulbagarden.net/media/upload/4/4e/Menu_SV_Dudunsparce.png'},
+{id: 'threedudunsparce', name: 'Three-Segment Form Dudunsparce', image: 'https://www.serebii.net/scarletviolet/pokemon/new/982-t.png'},
+{id: 'kingambit', name: 'Kingambit', image: 'https://archives.bulbagarden.net/media/upload/a/ab/Menu_SV_Kingambit.png'},
+{id: 'greattusk', name: 'Great Tusk', image: 'https://archives.bulbagarden.net/media/upload/0/09/Great_Tusk.png'},
+{id: 'screamtail', name: 'Scream Tail', image: 'https://archives.bulbagarden.net/media/upload/b/b7/Menu_SV_Scream_Tail.png'},
+{id: 'brutebonnet', name: 'Brute Bonnet', image: 'https://archives.bulbagarden.net/media/upload/c/c3/Menu_SV_Brute_Bonnet.png'},
+{id: 'fluttermane', name: 'Flutter Mane', image: 'https://archives.bulbagarden.net/media/upload/f/f4/Menu_SV_Flutter_Mane.png'},
+{id: 'slitherwing', name: 'Slither Wing', image: 'https://archives.bulbagarden.net/media/upload/5/5e/Menu_SV_Slither_Wing.png'},
+{id: 'sandyshocks', name: 'Sandy Shocks', image: 'https://archives.bulbagarden.net/media/upload/8/8c/Menu_SV_Sandy_Shocks.png'},
+{id: 'irontreads', name: 'Iron Treads', image: 'https://archives.bulbagarden.net/media/upload/thumb/7/76/Iron_Treads.png/500px-Iron_Treads.png'},
+{id: 'ironbundle', name: 'Iron Bundle', image: 'https://archives.bulbagarden.net/media/upload/4/49/Menu_SV_Iron_Bundle.png'},
+{id: 'ironhands', name: 'Iron Hands', image: 'https://archives.bulbagarden.net/media/upload/e/ed/Menu_SV_Iron_Hands.png'},
+{id: 'ironjugulis', name: 'Iron Jugulis', image: 'https://archives.bulbagarden.net/media/upload/b/bc/Menu_SV_Iron_Jugulis.png'},
+{id: 'ironmoth', name: 'Iron Moth', image: 'https://archives.bulbagarden.net/media/upload/3/33/Menu_SV_Iron_Moth.png'},
+{id: 'ironthorns', name: 'Iron Thorns', image: 'https://archives.bulbagarden.net/media/upload/1/1a/Menu_SV_Iron_Thorns.png'},
+{id: 'frigibax', name: 'Frigibax', image: 'https://archives.bulbagarden.net/media/upload/c/c6/Menu_SV_Frigibax.png'},
+{id: 'arctibax', name: 'Arctibax', image: 'https://archives.bulbagarden.net/media/upload/b/b3/Menu_SV_Arctibax.png'},
+{id: 'baxcalibur', name: 'Baxcalibur', image: 'https://archives.bulbagarden.net/media/upload/thumb/c/ce/Baxcalibur.png/500px-Baxcalibur.png'},
+{id: 'chestgimmighoul', name: 'Chest Form Gimmighoul', image: 'https://archives.bulbagarden.net/media/upload/thumb/7/74/Gimmighoul.png/500px-Gimmighoul.png'},
+{id: 'roamgimmmighoul', name: 'Roaming Form Gimmighoul', image: 'https://archives.bulbagarden.net/media/upload/thumb/b/ba/Gimmighoul-Roaming.png/220px-Gimmighoul-Roaming.png'},
+{id: 'gholdengo', name: 'Gholdengo', image: 'https://archives.bulbagarden.net/media/upload/8/83/Menu_SV_Gholdengo.png'},
+{id: 'wochien', name: 'Wo-Chien', image: 'https://archives.bulbagarden.net/media/upload/d/d5/Menu_SV_Wo-Chien.png'},
+{id: 'chienpao', name: 'Chien-Pao', image: 'https://archives.bulbagarden.net/media/upload/6/61/Menu_SV_Chien-Pao.png'},
+{id: 'tinglu', name: 'Ting-Lu', image: 'https://archives.bulbagarden.net/media/upload/6/68/Menu_SV_Ting-Lu.png'},
+{id: 'chiyu', name: 'Chi-Yu', image: 'https://archives.bulbagarden.net/media/upload/1/16/Menu_SV_Chi-Yu.png'},
+{id: 'roaringmoon', name: 'Roaring Moon', image: 'https://archives.bulbagarden.net/media/upload/1/1c/Menu_SV_Roaring_Moon.png'},
+{id: 'ironvaliant', name: 'Iron Valiant', image: 'https://archives.bulbagarden.net/media/upload/b/bf/Menu_SV_Iron_Valiant.png'},
+{id: 'koraidon', name: 'Koraidon', image: 'https://archives.bulbagarden.net/media/upload/thumb/2/24/Koraidon.png/500px-Koraidon.png'},
+{id: 'miraidon', name: 'Miraidon', image: 'https://archives.bulbagarden.net/media/upload/thumb/f/fb/Miraidon.png/500px-Miraidon.png'},
+];
+
+var myPicker = new picker.Picker({
+    items: items,
+    localStorageKey: 'picker-state'
+
+});
+
+var pickerUI = new PickerUI(myPicker, {
+    elements: {
+        pick: "#pick",
+        pass: "#pass",
+        undo: "#undo",
+        redo: "#redo",
+        evaluating: "#evaluating",
+        favorites: "#favorites"
+    }
+});
+
+pickerUI.initialize();
+
+/* Sortable favorites - you can safely remove this, and the Sortable.min.js script, if you don't want to be able to sort your favorite list. */
+var sortable = new Sortable(pickerUI.elem.favorites.get(0), {
+    draggable: '.item',
+    animation: 100,
+    onStart: function() {
+        pickerUI.elem.favorites.addClass("sorting");
+    },
+    onEnd: function() {
+        pickerUI.elem.favorites.removeClass("sorting");
+    },
+    onUpdate: function() {
+        myPicker.setFavorites(pickerUI.elem.favorites.children().map(function() {
+            return pickerUI.getItem(this);
+        }).get());
+        pickerUI.update(true);
+    }
+});
+/* End sortable favorites */
+</script>
+</body>
+</html>
